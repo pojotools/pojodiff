@@ -41,7 +41,7 @@ pojodiff operates on Jackson's `JsonNode` trees, ensuring compatibility with you
 <dependency>
     <groupId>io.github.pojotools</groupId>
     <artifactId>pojodiff-jackson</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
@@ -50,7 +50,7 @@ For SPI extensions (optional):
 <dependency>
     <groupId>io.github.pojotools</groupId>
     <artifactId>pojodiff-spi</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
