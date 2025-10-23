@@ -27,6 +27,13 @@
     <lombok.version>1.18.32</lombok.version>
     <assertj.version>3.25.3</assertj.version>
   </properties>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <dependencyManagement>
     <dependencies>
       <dependency>
