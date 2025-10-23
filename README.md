@@ -2,7 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.pojotools/pojodiff-jackson.svg?label=Maven%20Central&color=blue)](https://central.sonatype.com/artifact/io.github.pojotools/pojodiff-jackson)
 [![Build Status](https://github.com/pojotools/pojodiff/actions/workflows/ci.yml/badge.svg)](https://github.com/pojotools/pojodiff/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/YOUR_USERNAME/YOUR_GIST_ID/raw/pojodiff-coverage.json)](https://pojotools.github.io/pojodiff/coverage/)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Kyran121/a5d2142f2335c93ce3f8d5fb38b232bf/raw/pojodiff-coverage.json)](https://pojotools.github.io/pojodiff/coverage/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Java Version](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
