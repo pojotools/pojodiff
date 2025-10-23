@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.2//EN" "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
+<module name="Checker">
+  <property name="charset" value="UTF-8"/>
+  <property name="severity" value="warning"/>
+
+  <module name="TreeWalker">
+    <module name="MethodLength"><property name="max" value="50"/><property name="countEmpty" value="false"/></module>
+    <module name="ParameterNumber"><property name="max" value="6"/></module>
+    <module name="UnusedImports"/>
+    <module name="AvoidStarImport"/>
+    <module name="RedundantImport"/>
+    <module name="IllegalImport"/>
+
+    <!-- Common coding problems -->
+    <module name="EmptyStatement"/>
+    <module name="EqualsHashCode"/>
+    <module name="SimplifyBooleanExpression"/>
+    <module name="SimplifyBooleanReturn"/>
+    <module name="StringLiteralEquality"/>
+
+    <!-- Complexity -->
+    <module name="CyclomaticComplexity"><property name="max" value="15"/></module>
+
+    <!-- Naming conventions -->
+    <module name="ConstantName"/>
+    <module name="LocalFinalVariableName"/>
+    <module name="LocalVariableName"/>
+    <module name="MemberName"/>
+    <module name="MethodName"/>
+    <module name="PackageName"/>
+    <module name="ParameterName"/>
+    <module name="StaticVariableName"/>
+    <module name="TypeName"/>
+  </module>
+
+  <!-- File checks - these must be direct children of Checker -->
+  <module name="LineLength">
+    <property name="max" value="120"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+  </module>
+  <module name="FileLength"><property name="max" value="500"/></module>
+  <module name="FileTabCharacter"/>
+</module>

@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for pushing to gh-pages
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Run tests and verification
+      run: mvn -q -B verify
+
+    - name: Extract and upload coverage
+      if: success() && github.ref == 'refs/heads/main'
+      run: |
+        # Extract coverage percentage from JaCoCo CSV (sum all rows)
+        COVERAGE=$(awk -F',' 'NR>1 {
+          missed += $4
+          covered += $5
+        } END {
+          total = missed + covered
+          if (total > 0) {
+            percentage = (covered / total) * 100
+            printf "%.0f", percentage
+          } else {
+            print "0"
+          }
+        }' pojodiff-coverage/target/site/jacoco-aggregate/jacoco.csv)
+
+        # Determine color
+        if [ "$COVERAGE" -ge 80 ]; then COLOR="brightgreen"
+        elif [ "$COVERAGE" -ge 60 ]; then COLOR="yellow"
+        elif [ "$COVERAGE" -ge 40 ]; then COLOR="orange"
+        else COLOR="red"
+        fi
+
+        echo "Coverage: $COVERAGE% (Color: $COLOR)"
+
+        # Create badge JSON
+        cat > coverage-badge.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "coverage",
+          "message": "${COVERAGE}%",
+          "color": "${COLOR}"
+        }
+        EOF
+
+        # Upload to gist (requires GIST_SECRET with gist scope)
+        if [ -n "${{ secrets.GIST_SECRET }}" ]; then
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GIST_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"files\":{\"pojodiff-coverage.json\":{\"content\":$(cat coverage-badge.json | jq -Rs .)}}}" \
+            "https://api.github.com/gists/${{ secrets.GIST_ID }}"
+        else
+          echo "⚠️  GIST_SECRET not configured - skipping badge update"
+        fi
+
+    - name: Verify test artifacts exist
+      if: always()
+      run: |
+        echo "Checking for test artifacts..."
+        find . -name "surefire-reports" -type d | head -10
+        find . -path "*/target/site/jacoco" -type d | head -10
+        ls -la pojodiff-coverage/target/site/jacoco-aggregate/ || echo "No aggregate coverage found"
+
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-reports
+        path: |
+          pojodiff-spi/target/surefire-reports/**
+          pojodiff-core/target/surefire-reports/**
+          pojodiff-jackson/target/surefire-reports/**
+          pojodiff-examples/target/surefire-reports/**
+          pojodiff-spi/target/site/jacoco/**
+          pojodiff-core/target/site/jacoco/**
+          pojodiff-jackson/target/site/jacoco/**
+          pojodiff-examples/target/site/jacoco/**
+          pojodiff-coverage/target/site/jacoco-aggregate/**
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Deploy coverage report to GitHub Pages
+      if: success() && github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./pojodiff-coverage/target/site/jacoco-aggregate
+        destination_dir: coverage
+        keep_files: false
