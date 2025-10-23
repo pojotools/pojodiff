@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>DiffEngine.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.engine</a> &gt; <span class="el_source">DiffEngine.java</span></div><h1>DiffEngine.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.pojodiff.core.api.DiffEntry;
+import io.github.pojotools.pojodiff.core.api.DiffKind;
+import io.github.pojotools.pojodiff.core.config.DiffConfig;
+import io.github.pojotools.pojodiff.core.config.ListRule;
+import io.github.pojotools.pojodiff.core.util.PathUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
+
+/**
+ * Core diff engine that compares two JSON trees using the provided configuration. Call this
+ * directly instead of going through the PojoDiff facade.
+ */
+public final class DiffEngine {
+  private DiffEngine() {}
+
+  public static List&lt;DiffEntry&gt; compare(JsonNode left, JsonNode right, DiffConfig config) {
+<span class="fc" id="L26">    List&lt;DiffEntry&gt; diffs = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L27">    Context ctx = new Context(config, diffs);</span>
+<span class="fc" id="L28">    walk(ctx.config.rootPath(), left, right, ctx);</span>
+<span class="fc" id="L29">    return diffs;</span>
+  }
+
+  private static void walk(String path, JsonNode left, JsonNode right, Context ctx) {
+<span class="fc bfc" id="L33" title="All 2 branches covered.">    if (shouldSkip(path, left, right, ctx)) {</span>
+<span class="fc" id="L34">      return;</span>
+    }
+
+<span class="fc bfc" id="L37" title="All 2 branches covered.">    if (hasLeafNode(left, right)) {</span>
+<span class="fc" id="L38">      ctx.add(createChange(path, left, right));</span>
+<span class="fc" id="L39">      return;</span>
+    }
+
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">    if (bothAreContainers(left, right)) {</span>
+<span class="fc" id="L43">      compareContainers(path, left, right, ctx);</span>
+<span class="fc" id="L44">      return;</span>
+    }
+
+<span class="nc" id="L47">    ctx.add(createChange(path, left, right));</span>
+<span class="nc" id="L48">  }</span>
+
+  private static boolean shouldSkip(String path, JsonNode left, JsonNode right, Context ctx) {
+<span class="fc bfc" id="L51" title="All 2 branches covered.">    return isIgnoredPath(path, ctx)</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        || areIdentical(left, right)</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        || areEquivalent(path, left, right, ctx);</span>
+  }
+
+  private static boolean isIgnoredPath(String path, Context ctx) {
+<span class="fc" id="L57">    return ctx.config.isIgnored(path);</span>
+  }
+
+  private static boolean areIdentical(JsonNode left, JsonNode right) {
+<span class="fc bfc" id="L61" title="All 2 branches covered.">    return left == right; // NOPMD - CompareObjectsWithEquals - identity check is intentional</span>
+  }
+
+  private static boolean areEquivalent(String path, JsonNode left, JsonNode right, Context ctx) {
+<span class="fc bfc" id="L65" title="All 4 branches covered.">    return areEqual(left, right) || matchesCustomEquivalence(path, left, right, ctx.config);</span>
+  }
+
+  private static boolean areEqual(JsonNode left, JsonNode right) {
+<span class="fc bfc" id="L69" title="All 4 branches covered.">    if (left == null || right == null) {</span>
+<span class="fc" id="L70">      return false;</span>
+    }
+<span class="fc bfc" id="L72" title="All 4 branches covered.">    if (left.isValueNode() &amp;&amp; right.isValueNode()) {</span>
+<span class="fc" id="L73">      return Objects.equals(left, right);</span>
+    }
+<span class="fc" id="L75">    return false;</span>
+  }
+
+  private static boolean matchesCustomEquivalence(
+      String path, JsonNode left, JsonNode right, DiffConfig config) {
+<span class="fc" id="L80">    return config.equivalenceAt(path).map(eq -&gt; eq.test(left, right)).orElse(false);</span>
+  }
+
+  private static boolean hasLeafNode(JsonNode left, JsonNode right) {
+<span class="fc bfc" id="L84" title="All 4 branches covered.">    return isLeaf(left) || isLeaf(right);</span>
+  }
+
+  private static boolean isLeaf(JsonNode node) {
+<span class="pc bpc" id="L88" title="2 of 8 branches missed.">    return node == null || node.isValueNode() || node.isMissingNode() || node.isNull();</span>
+  }
+
+  private static DiffEntry createChange(String path, JsonNode oldValue, JsonNode newValue) {
+<span class="fc" id="L92">    return new DiffEntry(path, DiffKind.CHANGED, oldValue, newValue);</span>
+  }
+
+  private static boolean bothAreContainers(JsonNode left, JsonNode right) {
+<span class="pc bpc" id="L96" title="3 of 8 branches missed.">    return (left.isObject() &amp;&amp; right.isObject()) || (left.isArray() &amp;&amp; right.isArray());</span>
+  }
+
+  private static void compareContainers(String path, JsonNode left, JsonNode right, Context ctx) {
+<span class="pc bpc" id="L100" title="1 of 4 branches missed.">    if (left.isObject() &amp;&amp; right.isObject()) {</span>
+<span class="fc" id="L101">      diffObject(path, (ObjectNode) left, (ObjectNode) right, ctx);</span>
+<span class="pc bpc" id="L102" title="2 of 4 branches missed.">    } else if (left.isArray() &amp;&amp; right.isArray()) {</span>
+<span class="fc" id="L103">      diffArray(path, (ArrayNode) left, (ArrayNode) right, ctx);</span>
+    }
+<span class="fc" id="L105">  }</span>
+
+  private static void diffObject(String path, ObjectNode left, ObjectNode right, Context ctx) {
+<span class="fc" id="L108">    Set&lt;String&gt; fieldNames = collectFieldNames(left, right);</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">    for (String name : fieldNames) {</span>
+<span class="fc" id="L110">      compareObjectField(path, name, left, right, ctx);</span>
+<span class="fc" id="L111">    }</span>
+<span class="fc" id="L112">  }</span>
+
+  private static Set&lt;String&gt; collectFieldNames(ObjectNode left, ObjectNode right) {
+<span class="fc" id="L115">    Set&lt;String&gt; names = new TreeSet&lt;&gt;();</span>
+<span class="fc" id="L116">    left.fieldNames().forEachRemaining(names::add);</span>
+<span class="fc" id="L117">    right.fieldNames().forEachRemaining(names::add);</span>
+<span class="fc" id="L118">    return names;</span>
+  }
+
+  private static void compareObjectField(
+      String path, String fieldName, ObjectNode left, ObjectNode right, Context ctx) {
+<span class="fc" id="L123">    String childPath = PathUtils.child(path, fieldName);</span>
+<span class="fc" id="L124">    walk(childPath, left.get(fieldName), right.get(fieldName), ctx);</span>
+<span class="fc" id="L125">  }</span>
+
+  private static void diffArray(String path, ArrayNode left, ArrayNode right, Context ctx) {
+<span class="fc" id="L128">    ListRule rule = ctx.config.listRule(path).orElse(ListRule.none());</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">    if (rule.isNone()) {</span>
+<span class="fc" id="L130">      pairByIndex(path, left, right, ctx);</span>
+<span class="fc" id="L131">      return;</span>
+    }
+<span class="fc" id="L133">    pairById(path, left, right, ctx, rule);</span>
+<span class="fc" id="L134">  }</span>
+
+  private static void pairByIndex(String path, ArrayNode left, ArrayNode right, Context ctx) {
+<span class="fc" id="L137">    int maxSize = Math.max(left.size(), right.size());</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">    for (int i = 0; i &lt; maxSize; i++) {</span>
+<span class="fc" id="L139">      compareArrayElementByIndex(path, i, left, right, ctx);</span>
+    }
+<span class="fc" id="L141">  }</span>
+
+  private static void compareArrayElementByIndex(
+      String path, int index, ArrayNode left, ArrayNode right, Context ctx) {
+<span class="fc" id="L145">    String childPath = PathUtils.child(path, index);</span>
+<span class="fc" id="L146">    JsonNode leftNode = getElementAt(left, index);</span>
+<span class="fc" id="L147">    JsonNode rightNode = getElementAt(right, index);</span>
+<span class="fc" id="L148">    comparePairedNodes(childPath, leftNode, rightNode, ctx);</span>
+<span class="fc" id="L149">  }</span>
+
+  private static JsonNode getElementAt(ArrayNode array, int index) {
+<span class="fc bfc" id="L152" title="All 2 branches covered.">    return index &lt; array.size() ? array.get(index) : null;</span>
+  }
+
+  private static void comparePairedNodes(String path, JsonNode left, JsonNode right, Context ctx) {
+<span class="fc bfc" id="L156" title="All 2 branches covered.">    if (left == null) {</span>
+<span class="fc" id="L157">      recordAddition(path, right, ctx);</span>
+<span class="fc" id="L158">      return;</span>
+    }
+<span class="fc bfc" id="L160" title="All 2 branches covered.">    if (right == null) {</span>
+<span class="fc" id="L161">      recordRemoval(path, left, ctx);</span>
+<span class="fc" id="L162">      return;</span>
+    }
+<span class="fc" id="L164">    walk(path, left, right, ctx);</span>
+<span class="fc" id="L165">  }</span>
+
+  private static void recordAddition(String path, JsonNode value, Context ctx) {
+<span class="fc" id="L168">    ctx.add(new DiffEntry(path, DiffKind.ADDED, null, value));</span>
+<span class="fc" id="L169">  }</span>
+
+  private static void recordRemoval(String path, JsonNode value, Context ctx) {
+<span class="fc" id="L172">    ctx.add(new DiffEntry(path, DiffKind.REMOVED, value, null));</span>
+<span class="fc" id="L173">  }</span>
+
+  private static void pairById(
+      String path, ArrayNode left, ArrayNode right, Context ctx, ListRule rule) {
+<span class="fc" id="L177">    Map&lt;String, JsonNode&gt; leftIndex = ArrayElementIndexer.buildIndex(left, rule);</span>
+<span class="fc" id="L178">    Map&lt;String, JsonNode&gt; rightIndex = ArrayElementIndexer.buildIndex(right, rule);</span>
+<span class="fc" id="L179">    compareIndexedElements(path, leftIndex, rightIndex, ctx);</span>
+<span class="fc" id="L180">  }</span>
+
+  private static void compareIndexedElements(
+      String path, Map&lt;String, JsonNode&gt; leftIndex, Map&lt;String, JsonNode&gt; rightIndex, Context ctx) {
+<span class="fc" id="L184">    Set&lt;String&gt; allKeys = combinedKeys(leftIndex, rightIndex);</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">    for (String key : allKeys) {</span>
+<span class="fc" id="L186">      compareElementsByKey(path, key, leftIndex, rightIndex, ctx);</span>
+<span class="fc" id="L187">    }</span>
+<span class="fc" id="L188">  }</span>
+
+  private static Set&lt;String&gt; combinedKeys(
+      Map&lt;String, JsonNode&gt; leftIndex, Map&lt;String, JsonNode&gt; rightIndex) {
+<span class="fc" id="L192">    Set&lt;String&gt; keys = new TreeSet&lt;&gt;();</span>
+<span class="fc" id="L193">    keys.addAll(leftIndex.keySet());</span>
+<span class="fc" id="L194">    keys.addAll(rightIndex.keySet());</span>
+<span class="fc" id="L195">    return keys;</span>
+  }
+
+  private static void compareElementsByKey(
+      String path,
+      String key,
+      Map&lt;String, JsonNode&gt; leftIndex,
+      Map&lt;String, JsonNode&gt; rightIndex,
+      Context ctx) {
+    // Wrap the identifier key in {} to distinguish it from field names
+    // This allows PathUtils.normalizePathForTypeHint to correctly identify and remove identifiers
+<span class="fc" id="L206">    String childPath = PathUtils.child(path, &quot;{&quot; + key + &quot;}&quot;);</span>
+<span class="fc" id="L207">    JsonNode leftNode = leftIndex.get(key);</span>
+<span class="fc" id="L208">    JsonNode rightNode = rightIndex.get(key);</span>
+<span class="fc" id="L209">    comparePairedNodes(childPath, leftNode, rightNode, ctx);</span>
+<span class="fc" id="L210">  }</span>
+
+  private static final class Context {
+    final DiffConfig config;
+    final List&lt;DiffEntry&gt; diffs;
+
+<span class="fc" id="L216">    Context(DiffConfig config, List&lt;DiffEntry&gt; diffs) {</span>
+<span class="fc" id="L217">      this.config = config;</span>
+<span class="fc" id="L218">      this.diffs = diffs;</span>
+<span class="fc" id="L219">    }</span>
+
+    void add(DiffEntry e) {
+<span class="fc" id="L222">      diffs.add(e);</span>
+<span class="fc" id="L223">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

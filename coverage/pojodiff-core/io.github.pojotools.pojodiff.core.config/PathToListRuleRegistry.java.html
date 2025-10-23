@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PathToListRuleRegistry.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.config</a> &gt; <span class="el_source">PathToListRuleRegistry.java</span></div><h1>PathToListRuleRegistry.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.config;
+
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Registry mapping JSON Pointer paths to their corresponding list matching rules.
+ *
+ * &lt;p&gt;&lt;b&gt;Single Responsibility:&lt;/b&gt; Stores and retrieves path-specific ListRule configurations that
+ * define how array elements should be matched during diff comparison.
+ *
+ * &lt;p&gt;Immutable after construction. Thread-safe.
+ */
+final class PathToListRuleRegistry {
+  private final Map&lt;String, ListRule&gt; byPath;
+
+<span class="fc" id="L17">  PathToListRuleRegistry(Map&lt;String, ListRule&gt; byPath) {</span>
+<span class="fc" id="L18">    this.byPath = Map.copyOf(byPath);</span>
+<span class="fc" id="L19">  }</span>
+
+  Optional&lt;ListRule&gt; getRuleForPath(String pointer) {
+<span class="fc" id="L22">    return Optional.ofNullable(byPath.get(pointer));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

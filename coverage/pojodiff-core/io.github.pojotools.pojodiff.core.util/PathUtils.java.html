@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PathUtils.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.util</a> &gt; <span class="el_source">PathUtils.java</span></div><h1>PathUtils.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.util;
+
+import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+public final class PathUtils {
+  private PathUtils() {}
+
+  public static String child(String base, String key) {
+<span class="fc bfc" id="L11" title="All 2 branches covered.">    return base.endsWith(&quot;/&quot;) ? base + escape(key) : base + &quot;/&quot; + escape(key);</span>
+  }
+
+  public static String child(String base, int index) {
+<span class="fc" id="L15">    return child(base, String.valueOf(index));</span>
+  }
+
+  public static JsonNode at(ObjectNode obj, String pointerLike) {
+<span class="fc" id="L19">    JsonPointer pointer = compilePointer(pointerLike);</span>
+<span class="fc" id="L20">    return getNodeOrNull(obj, pointer);</span>
+  }
+
+  private static JsonPointer compilePointer(String pointerLike) {
+<span class="fc bfc" id="L24" title="All 2 branches covered.">    return pointerLike.startsWith(&quot;/&quot;)</span>
+<span class="fc" id="L25">        ? JsonPointer.compile(pointerLike)</span>
+<span class="fc" id="L26">        : JsonPointer.compile(&quot;/&quot; + escape(pointerLike));</span>
+  }
+
+  private static JsonNode getNodeOrNull(ObjectNode obj, JsonPointer pointer) {
+<span class="fc" id="L30">    JsonNode node = obj.at(pointer);</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">    return node.isMissingNode() ? null : node;</span>
+  }
+
+  /** Escapes a string for use in a JSON Pointer, according to RFC 6901. */
+  public static String escape(String raw) {
+<span class="fc" id="L36">    return raw.replace(&quot;~&quot;, &quot;~0&quot;).replace(&quot;/&quot;, &quot;~1&quot;);</span>
+  }
+
+  /** Normalizes a prefix by ensuring it ends with a slash. */
+  public static String normalizePrefix(String prefix) {
+<span class="fc bfc" id="L41" title="All 2 branches covered.">    return prefix.endsWith(&quot;/&quot;) ? prefix : prefix + &quot;/&quot;;</span>
+  }
+
+  /**
+   * Normalizes a JSON Pointer path by removing array indices and identifiers. This converts
+   * instance-specific paths to structure-based paths for type hint lookup.
+   *
+   * &lt;p&gt;Examples:
+   *
+   * &lt;ul&gt;
+   *   &lt;li&gt;{@code /items/0/name} → {@code /items/name}
+   *   &lt;li&gt;{@code /items/{id}/name} → {@code /items/name}
+   *   &lt;li&gt;{@code /users/123/address/city} → {@code /users/address/city}
+   * &lt;/ul&gt;
+   *
+   * @param path JSON Pointer path that may contain array indices or identifiers
+   * @return normalized path with indices/identifiers removed
+   */
+  public static String normalizePathForTypeHint(String path) {
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    if (isNullOrEmpty(path)) {</span>
+<span class="fc" id="L61">      return &quot;/&quot;;</span>
+    }
+
+<span class="fc bfc" id="L64" title="All 2 branches covered.">    if (isRoot(path)) {</span>
+<span class="fc" id="L65">      return path;</span>
+    }
+
+<span class="fc" id="L68">    String[] segments = path.split(&quot;/&quot;);</span>
+<span class="fc" id="L69">    StringBuilder normalized = buildNormalizedPath(segments);</span>
+
+<span class="fc bfc" id="L71" title="All 2 branches covered.">    return normalized.isEmpty() ? &quot;/&quot; : normalized.toString();</span>
+  }
+
+  private static boolean isNullOrEmpty(String path) {
+<span class="fc bfc" id="L75" title="All 4 branches covered.">    return path == null || path.isEmpty();</span>
+  }
+
+  private static boolean isRoot(String path) {
+<span class="fc" id="L79">    return &quot;/&quot;.equals(path);</span>
+  }
+
+  private static StringBuilder buildNormalizedPath(String[] segments) {
+<span class="fc" id="L83">    StringBuilder normalized = new StringBuilder();</span>
+
+<span class="fc bfc" id="L85" title="All 2 branches covered.">    for (String segment : segments) {</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">      if (isStructuralSegment(segment)) {</span>
+<span class="fc" id="L87">        normalized.append('/').append(segment);</span>
+      }
+    }
+
+<span class="fc" id="L91">    return normalized;</span>
+  }
+
+  private static boolean isStructuralSegment(String segment) {
+<span class="fc bfc" id="L95" title="All 4 branches covered.">    return isNonEmpty(segment) &amp;&amp; isNotArrayIndexOrIdentifier(segment);</span>
+  }
+
+  private static boolean isNonEmpty(String segment) {
+<span class="fc bfc" id="L99" title="All 2 branches covered.">    return !segment.isEmpty();</span>
+  }
+
+  private static boolean isNotArrayIndexOrIdentifier(String segment) {
+<span class="fc bfc" id="L103" title="All 4 branches covered.">    return !isNumericIndex(segment) &amp;&amp; !isIdentifierPattern(segment);</span>
+  }
+
+  private static boolean isNumericIndex(String segment) {
+<span class="fc" id="L107">    return segment.matches(&quot;\\d+&quot;);</span>
+  }
+
+  private static boolean isIdentifierPattern(String segment) {
+<span class="pc bpc" id="L111" title="1 of 4 branches missed.">    return segment.startsWith(&quot;{&quot;) &amp;&amp; segment.endsWith(&quot;}&quot;);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

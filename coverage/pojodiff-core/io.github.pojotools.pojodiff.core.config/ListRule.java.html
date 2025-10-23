@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ListRule.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.config</a> &gt; <span class="el_source">ListRule.java</span></div><h1>ListRule.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.config;
+
+import lombok.NonNull;
+import lombok.Value;
+import lombok.experimental.Accessors;
+
+/**
+ * Defines how to match array elements by identifier for stable diff comparison.
+ *
+ * &lt;p&gt;&lt;b&gt;Single Responsibility:&lt;/b&gt; Specifies the identifier extraction strategy (field name vs.
+ * JSON Pointer) and path for matching array elements across left and right JSON structures.
+ *
+ * &lt;p&gt;Immutable value object. Thread-safe.
+ */
+<span class="nc bnc" id="L15" title="All 16 branches missed.">@Value</span>
+@Accessors(fluent = true)
+public class ListRule {
+<span class="fc" id="L18">  @NonNull String identifierPath;</span>
+<span class="fc" id="L19">  boolean pointer;</span>
+
+<span class="fc" id="L21">  private ListRule(String identifierPath, boolean pointer) {</span>
+<span class="pc bpc" id="L22" title="1 of 2 branches missed.">    if (identifierPath == null) {</span>
+<span class="nc" id="L23">      throw new IllegalArgumentException(&quot;identifierPath cannot be null&quot;);</span>
+    }
+<span class="fc" id="L25">    this.identifierPath = identifierPath;</span>
+<span class="fc" id="L26">    this.pointer = pointer;</span>
+<span class="fc" id="L27">  }</span>
+
+  public static ListRule none() {
+<span class="fc" id="L30">    return new ListRule(&quot;&quot;, false);</span>
+  }
+
+  /**
+   * Creates a list rule with an identifier path that can be either a field name or JSON Pointer.
+   * Automatically detects the type: paths starting with &quot;/&quot; are treated as JSON Pointers, all
+   * others are treated as field names.
+   *
+   * &lt;p&gt;Examples:
+   *
+   * &lt;ul&gt;
+   *   &lt;li&gt;{@code id(&quot;id&quot;)} - field name
+   *   &lt;li&gt;{@code id(&quot;/nested/id&quot;)} - JSON Pointer
+   *   &lt;li&gt;{@code id(&quot;uuid&quot;)} - field name
+   * &lt;/ul&gt;
+   *
+   * @param path field name or JSON Pointer path
+   * @return ListRule configured with the appropriate type
+   */
+  public static ListRule id(String path) {
+<span class="fc" id="L50">    validatePath(path);</span>
+<span class="fc" id="L51">    return new ListRule(path, isPointerPath(path));</span>
+  }
+
+  private static void validatePath(String path) {
+<span class="fc bfc" id="L55" title="All 4 branches covered.">    if (path == null || path.isEmpty()) {</span>
+<span class="fc" id="L56">      throw new IllegalArgumentException(&quot;identifier path must not be null or empty&quot;);</span>
+    }
+<span class="fc" id="L58">  }</span>
+
+  private static boolean isPointerPath(String path) {
+<span class="fc" id="L61">    return path.startsWith(&quot;/&quot;);</span>
+  }
+
+  public boolean isNone() {
+<span class="fc" id="L65">    return identifierPath.isEmpty();</span>
+  }
+
+  public boolean isPointer() {
+<span class="fc" id="L69">    return pointer;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

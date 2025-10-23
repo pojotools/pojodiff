@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PathIgnoreFilter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.config</a> &gt; <span class="el_source">PathIgnoreFilter.java</span></div><h1>PathIgnoreFilter.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.config;
+
+import io.github.pojotools.pojodiff.core.util.PathUtils;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+/**
+ * Determines whether a JSON Pointer path should be ignored during diff comparison.
+ *
+ * &lt;p&gt;&lt;b&gt;Single Responsibility:&lt;/b&gt; Evaluates paths against configured ignore rules (exact matches,
+ * prefix patterns, and regex patterns) to filter out unwanted paths.
+ *
+ * &lt;p&gt;Immutable after construction. Thread-safe.
+ */
+final class PathIgnoreFilter {
+  private final Set&lt;String&gt; exact;
+  private final List&lt;String&gt; prefixes;
+  private final List&lt;Pattern&gt; patterns;
+
+<span class="fc" id="L21">  PathIgnoreFilter(Set&lt;String&gt; exact, List&lt;String&gt; prefixes, List&lt;Pattern&gt; patterns) {</span>
+<span class="fc" id="L22">    this.exact = Set.copyOf(exact);</span>
+<span class="fc" id="L23">    this.prefixes = List.copyOf(prefixes);</span>
+<span class="fc" id="L24">    this.patterns = List.copyOf(patterns);</span>
+<span class="fc" id="L25">  }</span>
+
+  boolean shouldIgnore(String pointer) {
+<span class="fc bfc" id="L28" title="All 6 branches covered.">    return isExactMatch(pointer) || matchesAnyPrefix(pointer) || matchesAnyPattern(pointer);</span>
+  }
+
+  private boolean isExactMatch(String pointer) {
+<span class="fc" id="L32">    return exact.contains(pointer);</span>
+  }
+
+  private boolean matchesAnyPrefix(String pointer) {
+<span class="fc" id="L36">    return prefixes.stream()</span>
+<span class="fc" id="L37">        .anyMatch(prefix -&gt; pointer.startsWith(PathUtils.normalizePrefix(prefix)));</span>
+  }
+
+  private boolean matchesAnyPattern(String pointer) {
+<span class="fc" id="L41">    return patterns.stream().anyMatch(pattern -&gt; pattern.matcher(pointer).matches());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

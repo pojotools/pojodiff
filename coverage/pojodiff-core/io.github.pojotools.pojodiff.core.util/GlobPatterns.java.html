@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>GlobPatterns.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.util</a> &gt; <span class="el_source">GlobPatterns.java</span></div><h1>GlobPatterns.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.util;
+
+import java.util.Set;
+import java.util.regex.Pattern;
+
+/**
+ * Glob to regex converter for JSON Pointer paths. Supports '*', '**' and '?' wildcards.
+ * Intention-revealing, small helper methods per Uncle Bob's guidance.
+ */
+public final class GlobPatterns {
+<span class="fc" id="L11">  private static final Set&lt;Character&gt; REGEX_META_CHARS =</span>
+<span class="fc" id="L12">      Set.of('.', '(', ')', '+', '|', '^', '$', '@', '%', '\\', '{', '}', '[', ']', '#');</span>
+
+  private GlobPatterns() {}
+
+  public static Pattern globToRegex(String glob) {
+<span class="fc" id="L17">    StringBuilder regex = new StringBuilder();</span>
+<span class="fc" id="L18">    processGlobCharacters(glob.toCharArray(), regex);</span>
+<span class="fc" id="L19">    return Pattern.compile(regex.toString());</span>
+  }
+
+  private static void processGlobCharacters(char[] chars, StringBuilder out) {
+<span class="fc bfc" id="L23" title="All 2 branches covered.">    for (int i = 0; i &lt; chars.length; i++) {</span>
+<span class="fc" id="L24">      i = processCharacter(chars, i, out);</span>
+    }
+<span class="fc" id="L26">  }</span>
+
+  private static int processCharacter(char[] chars, int index, StringBuilder out) {
+<span class="fc" id="L29">    char c = chars[index];</span>
+
+<span class="fc bfc" id="L31" title="All 2 branches covered.">    if (isStar(c)) {</span>
+<span class="fc" id="L32">      return appendStar(out, chars, index);</span>
+    }
+
+<span class="fc bfc" id="L35" title="All 2 branches covered.">    if (isQuestion(c)) {</span>
+<span class="fc" id="L36">      appendQuestion(out);</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">    } else if (isRegexMeta(c)) {</span>
+<span class="fc" id="L38">      appendEscaped(out, c);</span>
+    } else {
+<span class="fc" id="L40">      appendLiteral(out, c);</span>
+    }
+
+<span class="fc" id="L43">    return index;</span>
+  }
+
+  private static boolean isStar(char c) {
+<span class="fc bfc" id="L47" title="All 2 branches covered.">    return c == '*';</span>
+  }
+
+  private static boolean isQuestion(char c) {
+<span class="fc bfc" id="L51" title="All 2 branches covered.">    return c == '?';</span>
+  }
+
+  private static int appendStar(StringBuilder out, char[] chars, int i) {
+<span class="fc bfc" id="L55" title="All 2 branches covered.">    if (isDoubleStar(chars, i)) {</span>
+<span class="fc" id="L56">      appendDoubleStar(out);</span>
+<span class="fc" id="L57">      return i + 1;</span>
+    }
+<span class="fc" id="L59">    appendSingleStar(out);</span>
+<span class="fc" id="L60">    return i;</span>
+  }
+
+  private static boolean isDoubleStar(char[] chars, int i) {
+<span class="fc bfc" id="L64" title="All 4 branches covered.">    return (i + 1) &lt; chars.length &amp;&amp; chars[i + 1] == '*';</span>
+  }
+
+  private static void appendDoubleStar(StringBuilder out) {
+<span class="fc" id="L68">    out.append(&quot;.*&quot;);</span>
+<span class="fc" id="L69">  }</span>
+
+  private static void appendSingleStar(StringBuilder out) {
+<span class="fc" id="L72">    out.append(&quot;[^/]*&quot;);</span>
+<span class="fc" id="L73">  }</span>
+
+  private static void appendQuestion(StringBuilder out) {
+<span class="fc" id="L76">    out.append(&quot;[^/]&quot;);</span>
+<span class="fc" id="L77">  }</span>
+
+  private static void appendEscaped(StringBuilder out, char c) {
+<span class="fc" id="L80">    out.append(&quot;\\&quot;).append(c);</span>
+<span class="fc" id="L81">  }</span>
+
+  private static void appendLiteral(StringBuilder out, char c) {
+<span class="fc" id="L84">    out.append(c);</span>
+<span class="fc" id="L85">  }</span>
+
+  private static boolean isRegexMeta(char c) {
+<span class="fc" id="L88">    return REGEX_META_CHARS.contains(c);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

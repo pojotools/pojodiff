@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>DiffConfig.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.core.config</a> &gt; <span class="el_source">DiffConfig.java</span></div><h1>DiffConfig.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.core.config;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import io.github.pojotools.pojodiff.core.util.GlobPatterns;
+import io.github.pojotools.pojodiff.core.util.PathUtils;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.regex.Pattern;
+
+/**
+ * Central configuration facade for JSON diff comparison behavior.
+ *
+ * &lt;p&gt;&lt;b&gt;Single Responsibility:&lt;/b&gt; Aggregates and provides unified access to all diff configuration
+ * components (list rules, ignore filters, equivalence predicates, type hints, and root path).
+ *
+ * &lt;p&gt;Immutable after construction via builder. Thread-safe.
+ */
+public final class DiffConfig {
+  private static final String DEFAULT_ROOT_PATH = &quot;/&quot;;
+
+  private final PathToListRuleRegistry listRules;
+  private final PathIgnoreFilter ignores;
+  private final EquivalenceRegistry equivalences;
+  private final Map&lt;String, String&gt; typeHints;
+  private final String rootPath;
+
+<span class="fc" id="L34">  private DiffConfig(Builder b) {</span>
+<span class="fc" id="L35">    this.listRules = buildListRules(b);</span>
+<span class="fc" id="L36">    this.ignores = buildIgnoreRules(b);</span>
+<span class="fc" id="L37">    this.equivalences = buildEquivalenceRegistry(b);</span>
+<span class="fc" id="L38">    this.typeHints = Map.copyOf(b.typeHints);</span>
+<span class="fc" id="L39">    this.rootPath = b.rootPath;</span>
+<span class="fc" id="L40">  }</span>
+
+  private static PathToListRuleRegistry buildListRules(Builder b) {
+<span class="fc" id="L43">    return new PathToListRuleRegistry(b.listRules);</span>
+  }
+
+  private static PathIgnoreFilter buildIgnoreRules(Builder b) {
+<span class="fc" id="L47">    return new PathIgnoreFilter(b.ignoreExact, b.ignorePrefixes, b.ignorePatterns);</span>
+  }
+
+  private static EquivalenceRegistry buildEquivalenceRegistry(Builder b) {
+<span class="fc" id="L51">    return new EquivalenceRegistry(</span>
+        b.equivalenceExact,
+        b.equivalencePatterns,
+        b.equivalencePrefixes,
+        b.equivalenceByType,
+        b.equivalenceFallback);
+  }
+
+  public Optional&lt;ListRule&gt; listRule(String pointer) {
+<span class="fc" id="L60">    String normalizedPath = PathUtils.normalizePathForTypeHint(pointer);</span>
+<span class="fc" id="L61">    return listRules.getRuleForPath(normalizedPath);</span>
+  }
+
+  public boolean isIgnored(String pointer) {
+<span class="fc" id="L65">    return ignores.shouldIgnore(pointer);</span>
+  }
+
+  public Optional&lt;BiPredicate&lt;JsonNode, JsonNode&gt;&gt; equivalenceAt(String pointer) {
+<span class="fc" id="L69">    String normalizedPath = PathUtils.normalizePathForTypeHint(pointer);</span>
+<span class="fc" id="L70">    return equivalences.resolve(pointer, typeHints.get(normalizedPath));</span>
+  }
+
+  public String rootPath() {
+<span class="fc" id="L74">    return rootPath;</span>
+  }
+
+  public static Builder builder() {
+<span class="fc" id="L78">    return new Builder();</span>
+  }
+
+  /**
+   * Builder directly manages collections without sub-builders. Enforces non-null contract on public
+   * surfaces.
+   */
+<span class="fc" id="L85">  public static final class Builder {</span>
+<span class="fc" id="L86">    private final Map&lt;String, ListRule&gt; listRules = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L87">    private final Set&lt;String&gt; ignoreExact = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L88">    private final List&lt;String&gt; ignorePrefixes = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L89">    private final List&lt;Pattern&gt; ignorePatterns = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L90">    private final Map&lt;String, BiPredicate&lt;JsonNode, JsonNode&gt;&gt; equivalenceExact = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L91">    private final List&lt;EquivalenceRegistry.PathPatternEquivalence&gt; equivalencePatterns =</span>
+        new ArrayList&lt;&gt;();
+<span class="fc" id="L93">    private final Map&lt;String, BiPredicate&lt;JsonNode, JsonNode&gt;&gt; equivalencePrefixes =</span>
+        new HashMap&lt;&gt;();
+<span class="fc" id="L95">    private final Map&lt;String, BiPredicate&lt;JsonNode, JsonNode&gt;&gt; equivalenceByType = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L96">    private final Map&lt;String, String&gt; typeHints = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L97">    private BiPredicate&lt;JsonNode, JsonNode&gt; equivalenceFallback = null;</span>
+<span class="fc" id="L98">    private String rootPath = DEFAULT_ROOT_PATH;</span>
+
+    // List rules
+    public Builder list(String pointer, ListRule rule) {
+<span class="fc" id="L102">      validatePointer(pointer, &quot;pointer&quot;);</span>
+<span class="fc" id="L103">      Objects.requireNonNull(rule, &quot;rule cannot be null&quot;);</span>
+<span class="fc" id="L104">      listRules.put(pointer, rule);</span>
+<span class="fc" id="L105">      return this;</span>
+    }
+
+    // Ignores
+    public Builder ignore(String pointer) {
+<span class="fc" id="L110">      validatePointer(pointer, &quot;pointer&quot;);</span>
+<span class="fc" id="L111">      ignoreExact.add(pointer);</span>
+<span class="fc" id="L112">      return this;</span>
+    }
+
+    public Builder ignorePrefix(String prefix) {
+<span class="fc" id="L116">      validatePointer(prefix, &quot;prefix&quot;);</span>
+<span class="fc" id="L117">      ignorePrefixes.add(prefix);</span>
+<span class="fc" id="L118">      return this;</span>
+    }
+
+    public Builder ignorePattern(Pattern pattern) {
+<span class="fc" id="L122">      Objects.requireNonNull(pattern, &quot;pattern cannot be null&quot;);</span>
+<span class="fc" id="L123">      ignorePatterns.add(pattern);</span>
+<span class="fc" id="L124">      return this;</span>
+    }
+
+    public Builder ignoreGlob(String glob) {
+<span class="fc" id="L128">      Objects.requireNonNull(glob, &quot;glob cannot be null&quot;);</span>
+<span class="fc" id="L129">      ignorePatterns.add(GlobPatterns.globToRegex(glob));</span>
+<span class="fc" id="L130">      return this;</span>
+    }
+
+    // Equivalences
+    public Builder equivalentAt(String pointer, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L135">      validatePointer(pointer, &quot;pointer&quot;);</span>
+<span class="fc" id="L136">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L137">      equivalenceExact.put(pointer, eq);</span>
+<span class="fc" id="L138">      return this;</span>
+    }
+
+    public Builder equivalentUnder(String prefix, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L142">      validatePointer(prefix, &quot;prefix&quot;);</span>
+<span class="fc" id="L143">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L144">      equivalencePrefixes.put(prefix, eq);</span>
+<span class="fc" id="L145">      return this;</span>
+    }
+
+    public Builder equivalentPattern(Pattern pattern, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L149">      Objects.requireNonNull(pattern, &quot;pattern cannot be null&quot;);</span>
+<span class="fc" id="L150">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L151">      equivalencePatterns.add(new EquivalenceRegistry.PathPatternEquivalence(pattern, eq));</span>
+<span class="fc" id="L152">      return this;</span>
+    }
+
+    public Builder equivalentForType(String typeKey, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L156">      validateNonEmpty(typeKey, &quot;typeKey&quot;);</span>
+<span class="fc" id="L157">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L158">      equivalenceByType.put(typeKey, eq);</span>
+<span class="fc" id="L159">      return this;</span>
+    }
+
+    public Builder equivalentFallback(BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L163">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L164">      equivalenceFallback = eq;</span>
+<span class="fc" id="L165">      return this;</span>
+    }
+
+    // Types
+    public Builder typeHint(String pointer, String typeKey) {
+<span class="fc" id="L170">      validatePointer(pointer, &quot;pointer&quot;);</span>
+<span class="fc" id="L171">      validateNonEmpty(typeKey, &quot;typeKey&quot;);</span>
+<span class="fc" id="L172">      typeHints.put(pointer, typeKey);</span>
+<span class="fc" id="L173">      return this;</span>
+    }
+
+    // Other
+    public Builder rootPath(String root) {
+<span class="fc" id="L178">      this.rootPath = normalizeRootPath(root);</span>
+<span class="fc" id="L179">      return this;</span>
+    }
+
+    public DiffConfig build() {
+<span class="fc" id="L183">      return new DiffConfig(this);</span>
+    }
+
+    private static void validatePointer(String pointer, String paramName) {
+<span class="fc" id="L187">      Objects.requireNonNull(pointer, paramName + &quot; cannot be null&quot;);</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">      if (pointer.isEmpty()) {</span>
+<span class="fc" id="L189">        throw new IllegalArgumentException(paramName + &quot; cannot be empty&quot;);</span>
+      }
+<span class="fc" id="L191">    }</span>
+
+    private static void validateNonEmpty(String value, String paramName) {
+<span class="fc" id="L194">      Objects.requireNonNull(value, paramName + &quot; cannot be null&quot;);</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">      if (value.trim().isEmpty()) {</span>
+<span class="fc" id="L196">        throw new IllegalArgumentException(paramName + &quot; cannot be blank&quot;);</span>
+      }
+<span class="fc" id="L198">    }</span>
+
+    private static String normalizeRootPath(String root) {
+<span class="fc bfc" id="L201" title="All 4 branches covered.">      if (root == null || root.isBlank()) {</span>
+<span class="fc" id="L202">        return DEFAULT_ROOT_PATH;</span>
+      }
+<span class="fc" id="L204">      return root;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

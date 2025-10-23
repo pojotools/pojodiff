@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JacksonAdapters.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-jackson</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.jackson</a> &gt; <span class="el_source">JacksonAdapters.java</span></div><h1>JacksonAdapters.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.jackson;
+
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
+import com.fasterxml.jackson.databind.ser.BeanSerializer;
+import com.fasterxml.jackson.databind.ser.BeanSerializerFactory;
+import com.fasterxml.jackson.databind.ser.PropertyWriter;
+import io.github.pojotools.pojodiff.core.util.PathUtils;
+import io.github.pojotools.pojodiff.spi.TypeHints;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Jackson-specific adapters for PojoDiff integration.
+ *
+ * &lt;p&gt;&lt;b&gt;Single Responsibility:&lt;/b&gt; Provides type-hint inference for Jackson-annotated
+ * classes using ObjectMapper metadata, with configurable recursion depth limits and
+ * cycle detection for self-referential types.
+ */
+public final class JacksonAdapters {
+  private JacksonAdapters() {}
+
+  /**
+   * Type-hint inference with default configuration (depth 1 for self-referential types).
+   * Stops after one level of recursion to prevent infinite loops.
+   */
+  public static TypeHints inferTypeHints(Class&lt;?&gt; rootType, ObjectMapper mapper) {
+<span class="fc" id="L33">    return inferTypeHints(rootType, mapper, TypeHintInferenceConfig.defaultConfig());</span>
+  }
+
+  /**
+   * Type-hint inference with custom configuration for recursion depth control.
+   *
+   * &lt;p&gt;Example configurations:
+   * &lt;pre&gt;{@code
+   * // Stop at first self-reference (most conservative)
+   * TypeHints hints = inferTypeHints(Schedule.class, mapper,
+   *     TypeHintInferenceConfig.stopAtFirstReference());
+   *
+   * // Custom global depth
+   * TypeHints hints = inferTypeHints(Schedule.class, mapper,
+   *     TypeHintInferenceConfig.builder()
+   *         .defaultMaxDepth(2)
+   *         .build());
+   *
+   * // Per-path depth control
+   * TypeHints hints = inferTypeHints(Schedule.class, mapper,
+   *     TypeHintInferenceConfig.builder()
+   *         .defaultMaxDepth(1)
+   *         .maxDepthForPrefix(&quot;/exclusionSchedules&quot;, 3)  // Deeper for this path
+   *         .maxDepthForPrefix(&quot;/metadata&quot;, 0)            // No recursion here
+   *         .build());
+   * }&lt;/pre&gt;
+   *
+   * @param rootType The root class to infer type hints from
+   * @param mapper The ObjectMapper for serialization metadata
+   * @param config Configuration controlling recursion depth behavior
+   */
+  public static TypeHints inferTypeHints(
+      Class&lt;?&gt; rootType, ObjectMapper mapper, TypeHintInferenceConfig config) {
+<span class="fc" id="L66">    var context = new InferenceContext(mapper, config);</span>
+<span class="fc" id="L67">    context.walk(&quot;&quot;, mapper.constructType(rootType));</span>
+<span class="fc" id="L68">    return context.buildTypeHints();</span>
+  }
+
+  /**
+   * Encapsulates the traversal state for type hint inference.
+   * Reduces parameter passing and groups related data.
+   */
+  private static final class InferenceContext {
+    private final ObjectMapper mapper;
+    private final TypeHintInferenceConfig config;
+<span class="fc" id="L78">    private final Map&lt;String, String&gt; typeHints = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L79">    private final Map&lt;JavaType, Integer&gt; depthTracker = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L81">    InferenceContext(ObjectMapper mapper, TypeHintInferenceConfig config) {</span>
+<span class="fc" id="L82">      this.mapper = mapper;</span>
+<span class="fc" id="L83">      this.config = config;</span>
+<span class="fc" id="L84">    }</span>
+
+    TypeHints buildTypeHints() {
+<span class="fc" id="L87">      return new MapBackedTypeHints(typeHints);</span>
+    }
+
+    void walk(String path, JavaType type) {
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">      if (type == null) {</span>
+<span class="nc" id="L92">        return;</span>
+      }
+
+<span class="fc" id="L95">      JavaType unwrapped = unwrapOptionalType(type);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">      if (isWrappedType(unwrapped, type)) {</span>
+<span class="fc" id="L97">        walk(path, unwrapped);</span>
+<span class="fc" id="L98">        return;</span>
+      }
+
+<span class="fc bfc" id="L101" title="All 2 branches covered.">      if (isCollectionType(type)) {</span>
+<span class="fc" id="L102">        walkCollectionType(path, type);</span>
+<span class="fc" id="L103">        return;</span>
+      }
+
+<span class="fc bfc" id="L106" title="All 2 branches covered.">      if (exceedsMaxDepth(path, type)) {</span>
+<span class="fc" id="L107">        return;</span>
+      }
+
+<span class="fc" id="L110">      processWithDepthTracking(path, type);</span>
+<span class="fc" id="L111">    }</span>
+
+    private JavaType unwrapOptionalType(JavaType type) {
+<span class="fc" id="L114">      Class&lt;?&gt; rawClass = type.getRawClass();</span>
+
+<span class="fc bfc" id="L116" title="All 2 branches covered.">      if (isGenericOptional(rawClass, type)) {</span>
+<span class="fc" id="L117">        return type.containedType(0);</span>
+      }
+
+<span class="fc bfc" id="L120" title="All 2 branches covered.">      if (isPrimitiveOptional(rawClass)) {</span>
+<span class="fc" id="L121">        return unwrapPrimitiveOptional(rawClass);</span>
+      }
+
+<span class="fc" id="L124">      return type;</span>
+    }
+
+    private boolean isGenericOptional(Class&lt;?&gt; rawClass, JavaType type) {
+<span class="pc bpc" id="L128" title="1 of 4 branches missed.">      return rawClass.equals(Optional.class) &amp;&amp; type.containedTypeCount() == 1;</span>
+    }
+
+    private boolean isPrimitiveOptional(Class&lt;?&gt; rawClass) {
+<span class="fc bfc" id="L132" title="All 6 branches covered.">      return rawClass == java.util.OptionalInt.class</span>
+          || rawClass == java.util.OptionalLong.class
+          || rawClass == java.util.OptionalDouble.class;
+    }
+
+    private JavaType unwrapPrimitiveOptional(Class&lt;?&gt; rawClass) {
+<span class="fc" id="L138">      Class&lt;?&gt; wrapperClass = getPrimitiveWrapperClass(rawClass);</span>
+<span class="fc" id="L139">      return constructType(wrapperClass);</span>
+    }
+
+    private Class&lt;?&gt; getPrimitiveWrapperClass(Class&lt;?&gt; rawClass) {
+<span class="fc bfc" id="L143" title="All 2 branches covered.">      if (rawClass == java.util.OptionalInt.class) {</span>
+<span class="fc" id="L144">        return Integer.class;</span>
+      }
+<span class="fc bfc" id="L146" title="All 2 branches covered.">      if (rawClass == java.util.OptionalLong.class) {</span>
+<span class="fc" id="L147">        return Long.class;</span>
+      }
+<span class="fc" id="L149">      return Double.class;</span>
+    }
+
+    private JavaType constructType(Class&lt;?&gt; clazz) {
+<span class="fc" id="L153">      return mapper.getTypeFactory().constructType(clazz);</span>
+    }
+
+    private boolean isWrappedType(JavaType unwrapped, JavaType original) {
+<span class="fc bfc" id="L157" title="All 2 branches covered.">      return !unwrapped.equals(original);</span>
+    }
+
+    private static boolean isCollectionType(JavaType type) {
+<span class="fc bfc" id="L161" title="All 4 branches covered.">      return type.isCollectionLikeType() || type.isArrayType();</span>
+    }
+
+    private void walkCollectionType(String path, JavaType type) {
+<span class="fc" id="L165">      JavaType elementType = type.getContentType();</span>
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">      if (elementType != null) {</span>
+        // Normalize path: /items/{id}/name -&gt; /items/name
+        // This makes type hints structure-based, not instance-based
+<span class="fc" id="L169">        walk(path, elementType);</span>
+      }
+<span class="fc" id="L171">    }</span>
+
+    private boolean exceedsMaxDepth(String path, JavaType type) {
+<span class="fc" id="L174">      int currentDepth = depthTracker.getOrDefault(type, 0);</span>
+<span class="fc" id="L175">      int maxDepth = config.maxDepthForPath(normalizePath(path));</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">      return currentDepth &gt; maxDepth;</span>
+    }
+
+    private static String normalizePath(String path) {
+<span class="fc bfc" id="L180" title="All 2 branches covered.">      return path.isEmpty() ? &quot;/&quot; : path;</span>
+    }
+
+    private void processWithDepthTracking(String path, JavaType type) {
+<span class="fc" id="L184">      int currentDepth = depthTracker.getOrDefault(type, 0);</span>
+<span class="fc" id="L185">      depthTracker.put(type, currentDepth + 1);</span>
+      try {
+<span class="fc" id="L187">        processType(path, type);</span>
+      } finally {
+<span class="fc" id="L189">        depthTracker.put(type, currentDepth);</span>
+      }
+<span class="fc" id="L191">    }</span>
+
+    private void processType(String path, JavaType type) {
+<span class="fc bfc" id="L194" title="All 2 branches covered.">      if (isLeaf(type)) {</span>
+<span class="fc" id="L195">        recordTypeHint(path, type);</span>
+<span class="fc" id="L196">        return;</span>
+      }
+<span class="fc" id="L198">      walkObjectProperties(path, type);</span>
+<span class="fc" id="L199">    }</span>
+
+    private static boolean isLeaf(JavaType type) {
+<span class="fc" id="L202">      Class&lt;?&gt; rawClass = type.getRawClass();</span>
+<span class="fc bfc" id="L203" title="All 2 branches covered.">      return rawClass.isPrimitive()</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">          || rawClass.getName().startsWith(&quot;java.&quot;)</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">          || rawClass.isEnum();</span>
+    }
+
+    private void recordTypeHint(String path, JavaType type) {
+<span class="fc" id="L209">      typeHints.put(normalizePath(path), type.getRawClass().getName());</span>
+<span class="fc" id="L210">    }</span>
+
+    private void walkObjectProperties(String path, JavaType type) {
+<span class="fc" id="L213">      BeanSerializer serializer = createSerializer(type);</span>
+<span class="pc bpc" id="L214" title="1 of 2 branches missed.">      if (serializer == null) {</span>
+<span class="nc" id="L215">        return;</span>
+      }
+
+<span class="fc" id="L218">      Iterator&lt;PropertyWriter&gt; properties = serializer.properties();</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">      while (properties.hasNext()) {</span>
+<span class="fc" id="L220">        walkProperty(path, properties.next());</span>
+      }
+<span class="fc" id="L222">    }</span>
+
+    private BeanSerializer createSerializer(JavaType type) {
+      try {
+<span class="fc" id="L226">        var provider = mapper.getSerializerProviderInstance();</span>
+<span class="fc" id="L227">        var serializer = BeanSerializerFactory.instance.createSerializer(provider, type);</span>
+<span class="pc bpc" id="L228" title="1 of 2 branches missed.">        return (serializer instanceof BeanSerializer s) ? s : null;</span>
+<span class="nc" id="L229">      } catch (JsonMappingException e) {</span>
+<span class="nc" id="L230">        return null; // Type cannot be serialized</span>
+      }
+    }
+
+    private void walkProperty(String basePath, PropertyWriter writer) {
+<span class="pc bpc" id="L235" title="1 of 2 branches missed.">      if (!(writer instanceof BeanPropertyWriter bpw)) {</span>
+<span class="nc" id="L236">        return;</span>
+      }
+
+<span class="fc" id="L239">      String propertyName = PathUtils.escape(writer.getName());</span>
+<span class="fc" id="L240">      String childPath = PathUtils.child(basePath, propertyName);</span>
+<span class="fc" id="L241">      walk(childPath, bpw.getType());</span>
+<span class="fc" id="L242">    }</span>
+  }
+
+<span class="fc" id="L245">  private record MapBackedTypeHints(Map&lt;String, String&gt; map) implements TypeHints {</span>
+    @Override
+    public Optional&lt;String&gt; resolve(String jsonPointer) {
+<span class="fc" id="L248">      return Optional.ofNullable(map.get(jsonPointer));</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

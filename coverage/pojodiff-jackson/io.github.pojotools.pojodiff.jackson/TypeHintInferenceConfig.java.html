@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>TypeHintInferenceConfig.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">pojodiff-coverage</a> &gt; <a href="../index.html" class="el_bundle">pojodiff-jackson</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.pojodiff.jackson</a> &gt; <span class="el_source">TypeHintInferenceConfig.java</span></div><h1>TypeHintInferenceConfig.java</h1><pre class="source lang-java linenums">package io.github.pojotools.pojodiff.jackson;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+/**
+ * Configuration for type hint inference from Jackson-annotated classes.
+ *
+ * &lt;p&gt;&lt;b&gt;Single Responsibility:&lt;/b&gt; Defines recursion depth limits for self-referential
+ * types during type hint inference, with global defaults and per-path overrides.
+ *
+ * &lt;p&gt;Immutable after construction via builder. Thread-safe.
+ */
+public final class TypeHintInferenceConfig {
+  private static final int DEFAULT_RECURSION_DEPTH = 1;
+
+  private final int defaultMaxDepth;
+  private final Map&lt;String, Integer&gt; prefixPathDepths;
+  private final Map&lt;Pattern, Integer&gt; patternPathDepths;
+
+<span class="fc" id="L22">  private TypeHintInferenceConfig(Builder builder) {</span>
+<span class="fc" id="L23">    this.defaultMaxDepth = builder.defaultMaxDepth;</span>
+<span class="fc" id="L24">    this.prefixPathDepths = Map.copyOf(builder.prefixPathDepths);</span>
+<span class="fc" id="L25">    this.patternPathDepths = Map.copyOf(builder.patternPathDepths);</span>
+<span class="fc" id="L26">  }</span>
+
+  /**
+   * Creates a builder with conservative defaults (stop at first self-reference).
+   */
+  public static Builder builder() {
+<span class="fc" id="L32">    return new Builder();</span>
+  }
+
+  /**
+   * Creates a config that stops at the first self-reference (depth 0).
+   * The most conservative option - no recursion into self-referential types.
+   */
+  public static TypeHintInferenceConfig stopAtFirstReference() {
+<span class="fc" id="L40">    return builder().defaultMaxDepth(0).build();</span>
+  }
+
+  /**
+   * Creates a config that allows one level of recursion (depth 1).
+   * Good balance for most use cases.
+   */
+  public static TypeHintInferenceConfig defaultConfig() {
+<span class="fc" id="L48">    return builder().build();</span>
+  }
+
+  /**
+   * Creates a config that allows unlimited recursion.
+   * WARNING: May cause stack overflow or infinite loops for cyclic types!
+   * Only use this when you are certain types are not self-referential.
+   */
+  public static TypeHintInferenceConfig unlimited() {
+<span class="nc" id="L57">    return builder().defaultMaxDepth(Integer.MAX_VALUE).build();</span>
+  }
+
+  /**
+   * Returns the maximum recursion depth for a given JSON Pointer path.
+   * Checks prefix matches (longest first for specificity), then patterns, finally default.
+   */
+  public int maxDepthForPath(String jsonPointer) {
+<span class="fc" id="L65">    Integer depth = findPrefixMatchDepth(jsonPointer);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">    if (depth != null) {</span>
+<span class="fc" id="L67">      return depth;</span>
+    }
+
+<span class="fc" id="L70">    depth = findPatternMatchDepth(jsonPointer);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">    if (depth != null) {</span>
+<span class="fc" id="L72">      return depth;</span>
+    }
+
+<span class="fc" id="L75">    return defaultMaxDepth;</span>
+  }
+
+  private Integer findPrefixMatchDepth(String jsonPointer) {
+<span class="fc" id="L79">    String longestPrefix = null;</span>
+<span class="fc" id="L80">    Integer depthForLongestPrefix = null;</span>
+
+<span class="fc bfc" id="L82" title="All 2 branches covered.">    for (Map.Entry&lt;String, Integer&gt; entry : prefixPathDepths.entrySet()) {</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">      if (isMoreSpecificMatch(jsonPointer, entry.getKey(), longestPrefix)) {</span>
+<span class="fc" id="L84">        longestPrefix = entry.getKey();</span>
+<span class="fc" id="L85">        depthForLongestPrefix = entry.getValue();</span>
+      }
+<span class="fc" id="L87">    }</span>
+
+<span class="fc" id="L89">    return depthForLongestPrefix;</span>
+  }
+
+  private boolean isMoreSpecificMatch(String path, String candidatePrefix, String currentLongest) {
+<span class="pc bpc" id="L93" title="1 of 4 branches missed.">    return pathStartsWith(path, candidatePrefix) &amp;&amp; isLongerPrefix(candidatePrefix, currentLongest);</span>
+  }
+
+  private boolean pathStartsWith(String path, String prefix) {
+<span class="fc" id="L97">    return path.startsWith(prefix);</span>
+  }
+
+  private boolean isLongerPrefix(String candidatePrefix, String currentLongest) {
+<span class="pc bpc" id="L101" title="3 of 4 branches missed.">    return currentLongest == null || candidatePrefix.length() &gt; currentLongest.length();</span>
+  }
+
+  private Integer findPatternMatchDepth(String jsonPointer) {
+<span class="fc bfc" id="L105" title="All 2 branches covered.">    for (Map.Entry&lt;Pattern, Integer&gt; entry : patternPathDepths.entrySet()) {</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">      if (entry.getKey().matcher(jsonPointer).matches()) {</span>
+<span class="fc" id="L107">        return entry.getValue();</span>
+      }
+<span class="fc" id="L109">    }</span>
+<span class="fc" id="L110">    return null;</span>
+  }
+
+  public int defaultMaxDepth() {
+<span class="nc" id="L114">    return defaultMaxDepth;</span>
+  }
+
+  /**
+   * Builder for TypeHintInferenceConfig with fluent API.
+   */
+<span class="fc" id="L120">  public static final class Builder {</span>
+<span class="fc" id="L121">    private int defaultMaxDepth = DEFAULT_RECURSION_DEPTH;</span>
+<span class="fc" id="L122">    private final Map&lt;String, Integer&gt; prefixPathDepths = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L123">    private final Map&lt;Pattern, Integer&gt; patternPathDepths = new HashMap&lt;&gt;();</span>
+
+    /**
+     * Sets the default maximum recursion depth for all paths.
+     *
+     * @param depth 0 = stop at the first self-reference, 1 = one level deep, etc.
+     */
+    public Builder defaultMaxDepth(int depth) {
+<span class="fc" id="L131">      validateDepth(depth);</span>
+<span class="fc" id="L132">      this.defaultMaxDepth = depth;</span>
+<span class="fc" id="L133">      return this;</span>
+    }
+
+    private void validateDepth(int depth) {
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">      if (depth &lt; 0) {</span>
+<span class="nc" id="L138">        throw new IllegalArgumentException(&quot;depth cannot be negative: &quot; + depth);</span>
+      }
+<span class="fc" id="L140">    }</span>
+
+    /**
+     * Sets maximum recursion depth for all paths starting with the given prefix.
+     * Use this for both exact matches (e.g., &quot;/exclusionSchedules&quot;) and prefix matches (e.g., &quot;/metadata&quot;).
+     * When multiple prefixes match, the longest (most specific) prefix wins.
+     *
+     * @param prefix Path prefix (e.g., &quot;/metadata&quot; or &quot;/exclusionSchedules&quot;)
+     * @param depth Maximum recursion depth for matching paths
+     */
+    public Builder maxDepthForPrefix(String prefix, int depth) {
+<span class="fc" id="L151">      validatePrefix(prefix);</span>
+<span class="fc" id="L152">      validateDepth(depth);</span>
+<span class="fc" id="L153">      prefixPathDepths.put(prefix, depth);</span>
+<span class="fc" id="L154">      return this;</span>
+    }
+
+    private void validatePrefix(String prefix) {
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">      if (prefix == null) {</span>
+<span class="nc" id="L159">        throw new IllegalArgumentException(&quot;prefix cannot be null&quot;);</span>
+      }
+<span class="pc bpc" id="L161" title="2 of 4 branches missed.">      if (!prefix.isEmpty() &amp;&amp; !prefix.startsWith(&quot;/&quot;)) {</span>
+<span class="nc" id="L162">        throw new IllegalArgumentException(&quot;prefix must start with '/' or be empty: &quot; + prefix);</span>
+      }
+<span class="fc" id="L164">    }</span>
+
+    /**
+     * Sets maximum recursion depth for paths matching the given pattern.
+     * Patterns are checked after prefix matches, so prefix rules take precedence.
+     *
+     * @param pattern Regex pattern to match paths
+     * @param depth Maximum recursion depth for matching paths
+     */
+    public Builder maxDepthForPattern(Pattern pattern, int depth) {
+<span class="fc" id="L174">      validatePattern(pattern);</span>
+<span class="fc" id="L175">      validateDepth(depth);</span>
+<span class="fc" id="L176">      patternPathDepths.put(pattern, depth);</span>
+<span class="fc" id="L177">      return this;</span>
+    }
+
+    private void validatePattern(Pattern pattern) {
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">      if (pattern == null) {</span>
+<span class="nc" id="L182">        throw new IllegalArgumentException(&quot;pattern cannot be null&quot;);</span>
+      }
+<span class="fc" id="L184">    }</span>
+
+    public TypeHintInferenceConfig build() {
+<span class="fc" id="L187">      return new TypeHintInferenceConfig(this);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
