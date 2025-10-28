@@ -7,24 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-SNAPSHOT] - Current Development
+
 ### Added
-- Comprehensive documentation suite
-  - ARCHITECTURE.md - Architecture and design decisions
-  - PSEUDOCODE.md - Algorithm flow and component design
-  - DEVELOPMENT.md - Development environment setup guide
-  - OPERATIONS.md - Production operations and API usage
-  - CONTRIBUTING.md - Contribution guidelines
-  - RELEASE.md - Release process documentation
-  - COVERAGE-BADGE-SETUP.md - Coverage badge configuration
-  - CHANGELOG.md - Version history (this file)
-- Documentation map in README.md
+- `equivalentGlob()` method for glob-based equivalence pattern matching
+- `numericWithin(double)` equivalence method for numeric tolerance comparison
+- `offsetDateTimeWithin(Duration)` equivalence method for OffsetDateTime tolerance
+- Comprehensive test suite for new equivalence methods
+- `changedEntry()` helper method in tests for cleaner assertions
 
 ### Changed
-- Expanded MAPPING.md with comprehensive configuration examples
-- Enhanced ARCHITECTURE.md with detailed component descriptions
-- Enhanced PSEUDOCODE.md with complete algorithm flow and diagrams
+- Updated CI workflow to match flat2pojo (Maven caching, coverage extraction, GitHub Pages deployment)
+- Improved test assertions to use strict `containsExactly()` pattern throughout
+- Enhanced documentation with correct behavior descriptions for path normalization
 
-## [0.1.0-SNAPSHOT] - Current Development
+### Fixed
+- Corrected `normalizePathForTypeHint()` pseudocode to match actual implementation
+- Fixed documentation to accurately reflect prefix matching (not wildcard) for `equivalentUnder()`
+- Removed invalid `tokenAuth` parameter from Maven Central publishing configuration
+- Updated all documentation to list only existing `Equivalences` methods
+
+## [0.1.0] - 2025-01-XX
 
 ### Features
 - Jackson-based JSON tree comparison engine
@@ -32,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configurable equivalence predicates with precedence (exact > pattern > prefix > type > fallback)
 - Path ignoring (exact, prefix, pattern, glob)
 - Type hints for type-scoped equivalences
-- Cycle detection strategies (NONE, IDENTITY)
 - JSON Pointer paths for precise change location
 - Built-in equivalences:
   - Numeric tolerance (`numericWithin`)

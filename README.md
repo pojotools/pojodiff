@@ -97,7 +97,7 @@ DiffConfig config = DiffConfig.builder()
 
     // Tolerate small price differences
     .equivalentAt("/total", Equivalences.numericWithin(0.01))
-    .equivalentUnder("/items/*/price", Equivalences.numericWithin(0.01))
+    .equivalentGlob("/items/*/price", Equivalences.numericWithin(0.01))
 
     // Tolerate timestamp differences
     .equivalentAt("/lastModified",
@@ -196,6 +196,9 @@ Define custom equality semantics:
 .equivalentPattern(Pattern.compile("^/.*/price$"),
                    Equivalences.numericWithin(0.01))
 
+// All matching paths (glob - more readable)
+.equivalentGlob("/**/price", Equivalences.numericWithin(0.01))
+
 // Prefix
 .equivalentUnder("/financials", Equivalences.numericWithin(0.001))
 
@@ -209,11 +212,11 @@ Define custom equality semantics:
 
 ### Built-in Equivalences
 
-- `numericWithin(double epsilon)` - Numeric tolerance
+- `numericWithin(double epsilon)` - Numeric tolerance comparison
 - `caseInsensitive()` - Case-insensitive string comparison
 - `punctuationQuestionEquals()` - Ignores punctuation differences
-- `instantWithin(Duration)` - Time-based tolerance for Instant
-- `offsetDateTimeWithin(Duration)` - Tolerance for OffsetDateTime
+- `instantWithin(Duration)` - Time-based tolerance for Instant strings
+- `offsetDateTimeWithin(Duration)` - Time-based tolerance for OffsetDateTime strings
 - `zonedDateTimeTruncatedTo(ChronoUnit)` - Truncated ZonedDateTime comparison
 
 ## Type Hints

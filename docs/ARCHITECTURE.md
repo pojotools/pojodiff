@@ -147,14 +147,15 @@ pojodiff uses a **normalize → compare → report** pipeline with clean code pr
 
 #### PathToListRuleRegistry
 
-**Purpose:** Efficient lookup of list rules by JSON Pointer path.
+**Purpose:** Efficient lookup of list rules by normalized JSON Pointer path.
 
 **Implementation:**
-- `Map<String, ListRule>` for O(1) lookup
-- Supports wildcards in paths (e.g., `/items/*/reviews`)
+- `Map<String, ListRule>` for O(1) lookup using normalized paths
+- Paths are normalized to remove array indices and identifiers (e.g., `/items/0/name` → `/items/name`)
+- No wildcard support - uses exact matching on normalized paths
 
 **Key Methods:**
-- `getRuleForPath(pointer)` - Returns `Optional<ListRule>`
+- `getRuleForPath(pointer)` - Returns `Optional<ListRule>` after normalizing the input pointer
 
 #### PathIgnoreFilter
 

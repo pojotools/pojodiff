@@ -152,6 +152,14 @@ public final class DiffConfig {
       return this;
     }
 
+    public Builder equivalentGlob(String glob, BiPredicate<JsonNode, JsonNode> eq) {
+      Objects.requireNonNull(glob, "glob cannot be null");
+      Objects.requireNonNull(eq, "equivalence predicate cannot be null");
+      equivalencePatterns.add(
+          new EquivalenceRegistry.PathPatternEquivalence(GlobPatterns.globToRegex(glob), eq));
+      return this;
+    }
+
     public Builder equivalentForType(String typeKey, BiPredicate<JsonNode, JsonNode> eq) {
       validateNonEmpty(typeKey, "typeKey");
       Objects.requireNonNull(eq, "equivalence predicate cannot be null");

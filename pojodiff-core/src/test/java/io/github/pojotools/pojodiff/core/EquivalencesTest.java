@@ -2,6 +2,7 @@ package io.github.pojotools.pojodiff.core;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.pojodiff.core.api.DiffEntry;
@@ -18,6 +19,146 @@ import org.junit.jupiter.api.Test;
 public class EquivalencesTest {
 
   private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
+
+  /** Helper to create expected CHANGED DiffEntry for assertions. */
+  private static DiffEntry changedEntry(String path, JsonNode oldValue, JsonNode newValue) {
+    return new DiffEntry(path, DiffKind.CHANGED, oldValue, newValue);
+  }
+
+  // Numeric within tests
+
+  @Test
+  void numericWithinToleratesSmallDifferences() {
+    ObjectNode L = JSON.objectNode().put("price", 10.00);
+    ObjectNode R = JSON.objectNode().put("price", 10.005);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void numericWithinDetectsLargeDifferences() {
+    ObjectNode L = JSON.objectNode().put("price", 10.00);
+    ObjectNode R = JSON.objectNode().put("price", 10.02);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/price", L.get("price"), R.get("price")));
+  }
+
+  @Test
+  void numericWithinHandlesExactBoundary() {
+    ObjectNode L = JSON.objectNode().put("price", 10.00);
+    ObjectNode R = JSON.objectNode().put("price", 10.01);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void numericWithinHandlesNegativeDifferences() {
+    ObjectNode L = JSON.objectNode().put("price", 10.01);
+    ObjectNode R = JSON.objectNode().put("price", 10.00);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void numericWithinHandlesIntegerValues() {
+    ObjectNode L = JSON.objectNode().put("count", 100);
+    ObjectNode R = JSON.objectNode().put("count", 101);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/count", Equivalences.numericWithin(1.0)).build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void numericWithinHandlesNullLeft() {
+    ObjectNode L = JSON.objectNode();
+    L.putNull("price");
+    ObjectNode R = JSON.objectNode().put("price", 10.00);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/price", L.get("price"), R.get("price")));
+  }
+
+  @Test
+  void numericWithinHandlesNullRight() {
+    ObjectNode L = JSON.objectNode().put("price", 10.00);
+    ObjectNode R = JSON.objectNode();
+    R.putNull("price");
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/price", L.get("price"), R.get("price")));
+  }
+
+  @Test
+  void numericWithinHandlesNonNumericLeft() {
+    ObjectNode L = JSON.objectNode().put("price", "not-a-number");
+    ObjectNode R = JSON.objectNode().put("price", 10.00);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/price", L.get("price"), R.get("price")));
+  }
+
+  @Test
+  void numericWithinHandlesNonNumericRight() {
+    ObjectNode L = JSON.objectNode().put("price", 10.00);
+    ObjectNode R = JSON.objectNode().put("price", "not-a-number");
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.01)).build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/price", L.get("price"), R.get("price")));
+  }
+
+  @Test
+  void numericWithinHandlesZeroTolerance() {
+    ObjectNode L = JSON.objectNode().put("price", 10.00);
+    ObjectNode R = JSON.objectNode().put("price", 10.00);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/price", Equivalences.numericWithin(0.0)).build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void numericWithinHandlesLargeNumbers() {
+    ObjectNode L = JSON.objectNode().put("value", 1000000.00);
+    ObjectNode R = JSON.objectNode().put("value", 1000000.50);
+
+    DiffConfig cfg =
+        DiffConfig.builder().equivalentAt("/value", Equivalences.numericWithin(1.0)).build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
 
   // Case-insensitive tests
 
@@ -44,16 +185,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs)
-        .hasSize(1)
-        .first()
-        .satisfies(
-            diff -> {
-              assertThat(diff.path()).isEqualTo("/name");
-              assertThat(diff.kind()).isEqualTo(DiffKind.CHANGED);
-              assertThat(diff.oldValue().asText()).isEqualTo("Alice");
-              assertThat(diff.newValue().asText()).isEqualTo("Bob");
-            });
+    assertThat(diffs).containsExactly(changedEntry("/name", L.get("name"), R.get("name")));
   }
 
   @Test
@@ -94,14 +226,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs)
-        .hasSize(1)
-        .first()
-        .satisfies(
-            diff -> {
-              assertThat(diff.path()).isEqualTo("/text");
-              assertThat(diff.kind()).isEqualTo(DiffKind.CHANGED);
-            });
+    assertThat(diffs).containsExactly(changedEntry("/text", L.get("text"), R.get("text")));
   }
 
   @Test
@@ -144,16 +269,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs)
-        .hasSize(1)
-        .first()
-        .satisfies(
-            diff -> {
-              assertThat(diff.path()).isEqualTo("/ts");
-              assertThat(diff.kind()).isEqualTo(DiffKind.CHANGED);
-              assertThat(diff.oldValue().asText()).isEqualTo("2024-01-01T12:00:00Z");
-              assertThat(diff.newValue().asText()).isEqualTo("2024-01-01T12:00:02Z");
-            });
+    assertThat(diffs).containsExactly(changedEntry("/ts", L.get("ts"), R.get("ts")));
   }
 
   @Test
@@ -180,6 +296,139 @@ public class EquivalencesTest {
             .build();
 
     assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  // OffsetDateTime within tests
+
+  @Test
+  void offsetDateTimeWithinToleratesSmallTimeDifferences() {
+    ObjectNode L = JSON.objectNode().put("odt", "2024-01-01T12:00:00+00:00");
+    ObjectNode R = JSON.objectNode().put("odt", "2024-01-01T12:00:00.500+00:00");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void offsetDateTimeWithinDetectsLargeTimeDifferences() {
+    ObjectNode L = JSON.objectNode().put("odt", "2024-01-01T12:00:00+00:00");
+    ObjectNode R = JSON.objectNode().put("odt", "2024-01-01T12:02:00+00:00");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofMinutes(1)))
+            .build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/odt", L.get("odt"), R.get("odt")));
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesExactBoundary() {
+    ObjectNode L = JSON.objectNode().put("odt", "2024-01-01T12:00:00+00:00");
+    ObjectNode R = JSON.objectNode().put("odt", "2024-01-01T12:00:01+00:00");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesDifferentTimeZones() {
+    ObjectNode L = JSON.objectNode().put("odt", "2024-01-01T12:00:00+00:00");
+    ObjectNode R = JSON.objectNode().put("odt", "2024-01-01T13:00:00+01:00");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    // Same instant, different time zones - should be equivalent
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesMillisecondPrecision() {
+    ObjectNode L = JSON.objectNode().put("odt", "2024-01-01T12:00:00.100+00:00");
+    ObjectNode R = JSON.objectNode().put("odt", "2024-01-01T12:00:00.150+00:00");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofMillis(100)))
+            .build();
+
+    assertThat(DiffEngine.compare(L, R, cfg)).isEmpty();
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesInvalidDateFormat() {
+    ObjectNode L = JSON.objectNode().put("odt", "invalid-date");
+    ObjectNode R = JSON.objectNode().put("odt", "also-invalid");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    // Should detect difference since parsing fails
+    assertThat(diffs).containsExactly(changedEntry("/odt", L.get("odt"), R.get("odt")));
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesNullLeft() {
+    ObjectNode L = JSON.objectNode();
+    L.putNull("odt");
+    ObjectNode R = JSON.objectNode().put("odt", "2024-01-01T12:00:00+00:00");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/odt", L.get("odt"), R.get("odt")));
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesNullRight() {
+    ObjectNode L = JSON.objectNode().put("odt", "2024-01-01T12:00:00+00:00");
+    ObjectNode R = JSON.objectNode();
+    R.putNull("odt");
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/odt", L.get("odt"), R.get("odt")));
+  }
+
+  @Test
+  void offsetDateTimeWithinHandlesNonTextualValues() {
+    ObjectNode L = JSON.objectNode().put("odt", 12345);
+    ObjectNode R = JSON.objectNode().put("odt", 67890);
+
+    DiffConfig cfg =
+        DiffConfig.builder()
+            .equivalentAt("/odt", Equivalences.offsetDateTimeWithin(Duration.ofSeconds(1)))
+            .build();
+
+    List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
+
+    assertThat(diffs).containsExactly(changedEntry("/odt", L.get("odt"), R.get("odt")));
   }
 
   // ZonedDateTime truncated to tests
@@ -209,14 +458,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs)
-        .hasSize(1)
-        .first()
-        .satisfies(
-            diff -> {
-              assertThat(diff.path()).isEqualTo("/zdt");
-              assertThat(diff.kind()).isEqualTo(DiffKind.CHANGED);
-            });
+    assertThat(diffs).containsExactly(changedEntry("/zdt", L.get("zdt"), R.get("zdt")));
   }
 
   @Test
@@ -281,13 +523,7 @@ public class EquivalencesTest {
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
     assertThat(diffs)
-        .hasSize(1)
-        .first()
-        .satisfies(
-            diff -> {
-              assertThat(diff.path()).isEqualTo("/notIncluded");
-              assertThat(diff.kind()).isEqualTo(DiffKind.CHANGED);
-            });
+        .containsExactly(changedEntry("/notIncluded", L.get("notIncluded"), R.get("notIncluded")));
   }
 
   // Exception path tests
@@ -305,7 +541,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/text", L.get("text"), R.get("text")));
   }
 
   @Test
@@ -320,7 +556,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/text", L.get("text"), R.get("text")));
   }
 
   @Test
@@ -336,7 +572,7 @@ public class EquivalencesTest {
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
     // Should detect difference since parsing fails
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/zdt", L.get("zdt"), R.get("zdt")));
   }
 
   @Test
@@ -351,7 +587,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/zdt", L.get("zdt"), R.get("zdt")));
   }
 
   @Test
@@ -367,7 +603,7 @@ public class EquivalencesTest {
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
     // Should detect difference since parsing fails
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/ts", L.get("ts"), R.get("ts")));
   }
 
   @Test
@@ -382,7 +618,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/ts", L.get("ts"), R.get("ts")));
   }
 
   // Branch coverage tests
@@ -398,7 +634,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/name", L.get("name"), R.get("name")));
   }
 
   @Test
@@ -412,7 +648,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/name", L.get("name"), R.get("name")));
   }
 
   @Test
@@ -444,7 +680,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/zdt", L.get("zdt"), R.get("zdt")));
   }
 
   @Test
@@ -460,7 +696,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/zdt", L.get("zdt"), R.get("zdt")));
   }
 
   @Test
@@ -476,7 +712,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/ts", L.get("ts"), R.get("ts")));
   }
 
   @Test
@@ -492,7 +728,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/ts", L.get("ts"), R.get("ts")));
   }
 
   @Test
@@ -536,7 +772,7 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/name", L.get("name"), R.get("name")));
   }
 
   @Test
@@ -549,6 +785,6 @@ public class EquivalencesTest {
 
     List<DiffEntry> diffs = DiffEngine.compare(L, R, cfg);
 
-    assertThat(diffs).hasSize(1);
+    assertThat(diffs).containsExactly(changedEntry("/name", L.get("name"), R.get("name")));
   }
 }

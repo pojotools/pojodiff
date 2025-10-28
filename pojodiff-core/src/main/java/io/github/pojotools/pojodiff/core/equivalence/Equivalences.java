@@ -11,6 +11,21 @@ import java.util.function.BiPredicate;
 public final class Equivalences {
   private Equivalences() {}
 
+  /**
+   * Compare numeric values within a tolerance (epsilon).
+   *
+   * @param epsilon maximum absolute difference allowed between values
+   * @return predicate that returns true if |left - right| <= epsilon
+   */
+  public static BiPredicate<JsonNode, JsonNode> numericWithin(double epsilon) {
+    return (l, r) -> {
+      if (l == null || r == null || !l.isNumber() || !r.isNumber()) {
+        return false;
+      }
+      return Math.abs(l.asDouble() - r.asDouble()) <= epsilon;
+    };
+  }
+
   public static BiPredicate<JsonNode, JsonNode> caseInsensitive() {
     return (l, r) -> l != null && r != null && l.asText().equalsIgnoreCase(r.asText());
   }
@@ -83,6 +98,24 @@ public final class Equivalences {
     try {
       Instant a = Instant.parse(l.asText());
       Instant b = Instant.parse(r.asText());
+      return isWithinTolerance(a, b, tolerance);
+    } catch (DateTimeParseException e) {
+      return false;
+    }
+  }
+
+  /** Compare ISO-8601 `OffsetDateTime` strings within a tolerance. */
+  public static BiPredicate<JsonNode, JsonNode> offsetDateTimeWithin(Duration tolerance) {
+    return (l, r) -> compareOffsetDateTimes(l, r, tolerance);
+  }
+
+  private static boolean compareOffsetDateTimes(JsonNode l, JsonNode r, Duration tolerance) {
+    if (!bothAreTextual(l, r)) {
+      return false;
+    }
+    try {
+      Instant a = java.time.OffsetDateTime.parse(l.asText()).toInstant();
+      Instant b = java.time.OffsetDateTime.parse(r.asText()).toInstant();
       return isWithinTolerance(a, b, tolerance);
     } catch (DateTimeParseException e) {
       return false;

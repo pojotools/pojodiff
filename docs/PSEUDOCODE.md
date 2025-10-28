@@ -354,14 +354,13 @@ RETURN listRuleRegistry.getRuleForPath(path)
 ```
 getRuleForPath(path):
 
-// Direct O(1) lookup
-IF path IN rulesMap:
-  RETURN Optional.of(rulesMap.get(path))
+// Normalize the path first (removes array indices and identifiers)
+// Example: /items/0/name -> /items/name
+normalizedPath = normalizePathForTypeHint(path)
 
-// Wildcard matching (e.g., /items/*/reviews)
-FOR EACH (pattern, rule) IN rulesMap:
-  IF pathMatchesPattern(path, pattern):
-    RETURN Optional.of(rule)
+// Direct O(1) lookup using normalized path
+IF normalizedPath IN rulesMap:
+  RETURN Optional.of(rulesMap.get(normalizedPath))
 
 RETURN Optional.empty()
 ```
@@ -391,9 +390,43 @@ ELSE IF segment starts with "{":
 ```
 normalizePathForTypeHint(path):
 
-// Strip identity keys wrapped in {} for type hint lookup
-// Example: /items/{id123}/price → /items/*/price
-RETURN path.replaceAll("/\\{[^}]*\\}", "/*")
+// Remove array indices and identifier patterns from path segments
+// Converts instance-specific paths to structure-based paths
+// Examples:
+//   /items/0/name → /items/name
+//   /items/{id}/name → /items/name
+//   /users/123/address/city → /users/address/city
+
+// Handle edge cases
+IF path is null OR path is empty:
+  RETURN "/"
+
+IF path equals "/":
+  RETURN path
+
+// Split path into segments
+segments = path.split("/")
+normalized = empty StringBuilder
+
+// Filter segments
+FOR EACH segment IN segments:
+  // Skip empty segments (from leading slash)
+  IF segment.isEmpty():
+    CONTINUE
+
+  // Skip numeric indices (e.g., "0", "123")
+  IF segment matches "\\d+":
+    CONTINUE
+
+  // Skip identifier patterns (e.g., "{id}", "{uuid}")
+  IF segment.startsWith("{") AND segment.endsWith("}"):
+    CONTINUE
+
+  // Keep structural segments
+  normalized.append("/").append(segment)
+
+// Return "/" if no segments remain, otherwise return normalized path
+RETURN normalized.isEmpty() ? "/" : normalized.toString()
 ```
 
 ## PERFORMANCE CHARACTERISTICS

@@ -67,7 +67,7 @@ private static final PojoDiff DIFFER = new PojoDiffCore();
 private static final DiffConfig ORDER_CONFIG = DiffConfig.builder()
     .list("/items", ListRule.idField("sku"))
     .equivalentAt("/total", Equivalences.numericWithin(0.01))
-    .equivalentUnder("/items/*/price", Equivalences.numericWithin(0.01))
+    .equivalentGlob("/items/*/price", Equivalences.numericWithin(0.01))
     .build();
 
 public List<DiffEntry> compareOrders(Order old, Order new) {
@@ -324,7 +324,7 @@ public class DiffConfigProvider {
             .list("/items", ListRule.idField("sku"))
             .ignorePrefix("/metadata")
             .equivalentAt("/total", Equivalences.numericWithin(0.01))
-            .equivalentUnder("/items/*/price", Equivalences.numericWithin(0.01))
+            .equivalentGlob("/items/*/price", Equivalences.numericWithin(0.01))
             .equivalentForType("java.time.Instant",
                               Equivalences.instantWithin(Duration.ofSeconds(1)))
             .build();

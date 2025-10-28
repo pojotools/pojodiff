@@ -41,6 +41,18 @@ public class DiffConfigTest {
   }
 
   @Test
+  void builderRejectsNullEquivalentGlob() {
+    var builder = DiffConfig.builder();
+    assertThrows(NullPointerException.class, () -> builder.equivalentGlob(null, (l, r) -> true));
+  }
+
+  @Test
+  void builderRejectsNullEquivalentGlobPredicate() {
+    var builder = DiffConfig.builder();
+    assertThrows(NullPointerException.class, () -> builder.equivalentGlob("/**", null));
+  }
+
+  @Test
   void builderRejectsNullListRule() {
     var builder = DiffConfig.builder();
     assertThrows(NullPointerException.class, () -> builder.list("/items", null));
@@ -110,6 +122,7 @@ public class DiffConfigTest {
             .equivalentAt("/name", (l, r) -> true)
             .equivalentUnder("/data", (l, r) -> true)
             .equivalentPattern(Pattern.compile("^/value$"), (l, r) -> true)
+            .equivalentGlob("/**/price", (l, r) -> true)
             .equivalentForType("string", (l, r) -> true)
             .equivalentFallback((l, r) -> false)
             .typeHint("/when", "instant")

@@ -218,6 +218,19 @@ Define custom equality semantics for specific paths or types. Precedence: **exac
 
 **Use when:** Applying the same equivalence to multiple similar paths.
 
+### Glob Matching
+
+```java
+// Use glob wildcards (more readable than regex)
+.equivalentGlob("/**/price", Equivalences.numericWithin(0.01))
+.equivalentGlob("/**/timestamps/*", Equivalences.instantWithin(Duration.ofSeconds(1)))
+.equivalentGlob("/items/*/name", Equivalences.caseInsensitive())
+```
+
+**Use when:** Glob syntax is more readable than regex for pattern matching.
+
+**Glob Syntax:** Same as `ignoreGlob()` - `*` (any segment), `**` (any path), `?` (single char)
+
 ### Prefix Matching
 
 ```java
@@ -465,7 +478,7 @@ DiffConfig config = DiffConfig.builder()
 
 ### Q: Pattern vs Glob?
 
-**A:** `equivalentPattern()` and `ignorePattern()` use Java `Pattern` (regex). `ignoreGlob()` accepts wildcards (`*`, `?`, `**`) and compiles to a regex internally. Use globs for readability, patterns for complex logic.
+**A:** `equivalentPattern()` and `ignorePattern()` use Java `Pattern` (regex). `equivalentGlob()` and `ignoreGlob()` accept wildcards (`*`, `?`, `**`) and compile to regex internally. Use globs for readability, patterns for complex logic.
 
 ### Q: What if multiple equivalence rules match?
 
