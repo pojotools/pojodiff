@@ -82,7 +82,7 @@ public class ListRuleTest {
     ListRule fieldRule = ListRule.id("id");
     ListRule pointerRule = ListRule.id("/nested/id");
 
-    assertEquals(false, fieldRule.pointer());
-    assertEquals(true, pointerRule.pointer());
+    assertFalse(fieldRule.pointer());
+    assertTrue(pointerRule.pointer());
   }
 }
