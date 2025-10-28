@@ -152,56 +152,64 @@ public final class DiffConfig {
 <span class="fc" id="L152">      return this;</span>
     }
 
-    public Builder equivalentForType(String typeKey, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
-<span class="fc" id="L156">      validateNonEmpty(typeKey, &quot;typeKey&quot;);</span>
+    public Builder equivalentGlob(String glob, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L156">      Objects.requireNonNull(glob, &quot;glob cannot be null&quot;);</span>
 <span class="fc" id="L157">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
-<span class="fc" id="L158">      equivalenceByType.put(typeKey, eq);</span>
-<span class="fc" id="L159">      return this;</span>
+<span class="fc" id="L158">      equivalencePatterns.add(</span>
+<span class="fc" id="L159">          new EquivalenceRegistry.PathPatternEquivalence(GlobPatterns.globToRegex(glob), eq));</span>
+<span class="fc" id="L160">      return this;</span>
+    }
+
+    public Builder equivalentForType(String typeKey, BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
+<span class="fc" id="L164">      validateNonEmpty(typeKey, &quot;typeKey&quot;);</span>
+<span class="fc" id="L165">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L166">      equivalenceByType.put(typeKey, eq);</span>
+<span class="fc" id="L167">      return this;</span>
     }
 
     public Builder equivalentFallback(BiPredicate&lt;JsonNode, JsonNode&gt; eq) {
-<span class="fc" id="L163">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
-<span class="fc" id="L164">      equivalenceFallback = eq;</span>
-<span class="fc" id="L165">      return this;</span>
+<span class="fc" id="L171">      Objects.requireNonNull(eq, &quot;equivalence predicate cannot be null&quot;);</span>
+<span class="fc" id="L172">      equivalenceFallback = eq;</span>
+<span class="fc" id="L173">      return this;</span>
     }
 
     // Types
     public Builder typeHint(String pointer, String typeKey) {
-<span class="fc" id="L170">      validatePointer(pointer, &quot;pointer&quot;);</span>
-<span class="fc" id="L171">      validateNonEmpty(typeKey, &quot;typeKey&quot;);</span>
-<span class="fc" id="L172">      typeHints.put(pointer, typeKey);</span>
-<span class="fc" id="L173">      return this;</span>
+<span class="fc" id="L178">      validatePointer(pointer, &quot;pointer&quot;);</span>
+<span class="fc" id="L179">      validateNonEmpty(typeKey, &quot;typeKey&quot;);</span>
+<span class="fc" id="L180">      typeHints.put(pointer, typeKey);</span>
+<span class="fc" id="L181">      return this;</span>
     }
 
     // Other
     public Builder rootPath(String root) {
-<span class="fc" id="L178">      this.rootPath = normalizeRootPath(root);</span>
-<span class="fc" id="L179">      return this;</span>
+<span class="fc" id="L186">      this.rootPath = normalizeRootPath(root);</span>
+<span class="fc" id="L187">      return this;</span>
     }
 
     public DiffConfig build() {
-<span class="fc" id="L183">      return new DiffConfig(this);</span>
+<span class="fc" id="L191">      return new DiffConfig(this);</span>
     }
 
     private static void validatePointer(String pointer, String paramName) {
-<span class="fc" id="L187">      Objects.requireNonNull(pointer, paramName + &quot; cannot be null&quot;);</span>
-<span class="fc bfc" id="L188" title="All 2 branches covered.">      if (pointer.isEmpty()) {</span>
-<span class="fc" id="L189">        throw new IllegalArgumentException(paramName + &quot; cannot be empty&quot;);</span>
+<span class="fc" id="L195">      Objects.requireNonNull(pointer, paramName + &quot; cannot be null&quot;);</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">      if (pointer.isEmpty()) {</span>
+<span class="fc" id="L197">        throw new IllegalArgumentException(paramName + &quot; cannot be empty&quot;);</span>
       }
-<span class="fc" id="L191">    }</span>
+<span class="fc" id="L199">    }</span>
 
     private static void validateNonEmpty(String value, String paramName) {
-<span class="fc" id="L194">      Objects.requireNonNull(value, paramName + &quot; cannot be null&quot;);</span>
-<span class="fc bfc" id="L195" title="All 2 branches covered.">      if (value.trim().isEmpty()) {</span>
-<span class="fc" id="L196">        throw new IllegalArgumentException(paramName + &quot; cannot be blank&quot;);</span>
+<span class="fc" id="L202">      Objects.requireNonNull(value, paramName + &quot; cannot be null&quot;);</span>
+<span class="fc bfc" id="L203" title="All 2 branches covered.">      if (value.trim().isEmpty()) {</span>
+<span class="fc" id="L204">        throw new IllegalArgumentException(paramName + &quot; cannot be blank&quot;);</span>
       }
-<span class="fc" id="L198">    }</span>
+<span class="fc" id="L206">    }</span>
 
     private static String normalizeRootPath(String root) {
-<span class="fc bfc" id="L201" title="All 4 branches covered.">      if (root == null || root.isBlank()) {</span>
-<span class="fc" id="L202">        return DEFAULT_ROOT_PATH;</span>
+<span class="fc bfc" id="L209" title="All 4 branches covered.">      if (root == null || root.isBlank()) {</span>
+<span class="fc" id="L210">        return DEFAULT_ROOT_PATH;</span>
       }
-<span class="fc" id="L204">      return root;</span>
+<span class="fc" id="L212">      return root;</span>
     }
   }
 }

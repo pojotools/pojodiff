@@ -5,13 +5,13 @@ pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.api,DiffEntry,
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,EquivalenceRegistry,0,109,0,2,0,23,0,13,0,12
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,PathToListRuleRegistry,0,14,0,0,0,4,0,2,0,2
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,ListRule,81,54,17,5,2,16,12,11,3,9
-pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,DiffConfig.Builder,0,250,0,8,0,65,0,21,0,17
+pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,DiffConfig.Builder,0,270,0,8,0,70,0,22,0,18
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,EquivalenceRegistry.PathPatternEquivalence,0,17,0,0,0,4,0,1,0,1
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,DiffConfig,0,87,0,0,0,17,0,9,0,9
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.config,PathIgnoreFilter,0,60,0,6,0,10,0,10,0,7
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.util,PathUtils,0,178,1,35,0,30,1,33,0,16
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.util,GlobPatterns,0,213,0,18,0,36,0,23,0,14
-pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.equivalence,Equivalences,0,190,7,29,0,37,7,26,0,15
+pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.equivalence,Equivalences,0,250,9,39,0,49,9,35,0,20
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.engine,ArrayElementIndexer,0,81,0,12,0,17,0,13,0,7
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.engine,DiffEngine.Context,0,15,0,0,0,6,0,2,0,2
 pojodiff-coverage/pojodiff-core,io.github.pojotools.pojodiff.core.engine,DiffEngine,8,448,9,59,2,91,9,53,0,28
