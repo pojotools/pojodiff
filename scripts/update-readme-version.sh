@@ -50,7 +50,7 @@ if ! diff -q README.md README.md.bak > /dev/null 2>&1; then
 
     # Show what changed
     echo -e "${BLUE}Changes made:${NC}"
-    diff README.md.bak README.md | grep "^>" | head -5
+    diff README.md.bak README.md | grep "^>" | head -5 || true
 
     # Remove backup
     rm README.md.bak
