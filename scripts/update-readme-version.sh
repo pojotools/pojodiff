@@ -41,10 +41,8 @@ cp README.md README.md.bak
 
 # Update all version tags in dependency examples
 # This matches both SNAPSHOT and release versions
-sed -i.tmp "s/<version>[0-9]\+\.[0-9]\+\.[0-9]\+\(-SNAPSHOT\)\?<\/version>/<version>$LATEST_VERSION<\/version>/g" README.md
-
-# Remove the .tmp file created by sed
-rm -f README.md.tmp
+# macOS-compatible sed syntax
+sed -i '' "s/<version>[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-SNAPSHOT\)\{0,1\}<\/version>/<version>$LATEST_VERSION<\/version>/g" README.md
 
 # Check if any changes were made
 if ! diff -q README.md README.md.bak > /dev/null 2>&1; then

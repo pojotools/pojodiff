@@ -181,15 +181,18 @@ echo -e "${GREEN}✓ Release tag v$RELEASE_VERSION created and pushed${NC}"
 # Step 3b: Update README.md with new release version
 echo -e "${YELLOW}Step 3b: Updating README.md with new release version...${NC}"
 if [[ -x "./scripts/update-readme-version.sh" ]]; then
-    ./scripts/update-readme-version.sh > /dev/null 2>&1 || true
-    # Commit the README update
-    if ! git diff --quiet README.md; then
-        git add README.md
-        git commit -m "Update README.md with release version $RELEASE_VERSION"
-        git push origin main
-        echo -e "${GREEN}✓ README.md updated and committed with version $RELEASE_VERSION${NC}"
+    if ./scripts/update-readme-version.sh; then
+        # Commit the README update if changes were made
+        if ! git diff --quiet README.md; then
+            git add README.md
+            git commit -m "Update README.md with release version $RELEASE_VERSION"
+            git push origin main
+            echo -e "${GREEN}✓ README.md updated and committed with version $RELEASE_VERSION${NC}"
+        else
+            echo -e "${GREEN}✓ README.md already up to date${NC}"
+        fi
     else
-        echo -e "${GREEN}✓ README.md already up to date${NC}"
+        echo -e "${YELLOW}⚠ README update script failed, continuing anyway${NC}"
     fi
 else
     echo -e "${YELLOW}⚠ README update script not found or not executable${NC}"
@@ -235,17 +238,15 @@ if [[ "$RELEASE_SUCCESS" == "true" ]]; then
     NEXT_DEV_VERSION="${VERSION_PARTS[0]}.$NEXT_MINOR.0-SNAPSHOT"
 
     mvn versions:set -DnewVersion="$NEXT_DEV_VERSION" -q
+
+    # Clean up Maven versions backup files before committing
+    find . -name "*.versionsBackup" -delete 2>/dev/null || true
+
     git add .
     git commit -m "Prepare for next development iteration $NEXT_DEV_VERSION"
     git push origin main
 
     echo -e "${GREEN}✓ Next development version: $NEXT_DEV_VERSION${NC}"
-
-    # Step 6: Clean up
-    echo -e "${YELLOW}Step 6: Cleaning up...${NC}"
-
-    # Clean up Maven versions backup files
-    find . -name "*.versionsBackup" -delete 2>/dev/null || true
     echo -e "${GREEN}✓ Cleaned up Maven versions backup files${NC}"
 else
     echo -e "${YELLOW}Rolling back due to deployment failure...${NC}"
