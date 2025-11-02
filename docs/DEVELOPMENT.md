@@ -25,7 +25,7 @@ mvn clean verify
 pojodiff/
 ├── pojodiff-core/          # Core diff engine and configuration
 ├── pojodiff-jackson/       # Jackson integration and type inference
-├── pojodiff-spi/           # Extension interfaces (TypeHints, NodeTreeFactory)
+├── pojodiff-spi/           # Extension interfaces (TypeHints)
 ├── pojodiff-examples/      # Usage examples and integration tests
 ├── pojodiff-benchmarks/    # JMH performance benchmarks
 └── pojodiff-coverage/      # Aggregated test coverage reports
